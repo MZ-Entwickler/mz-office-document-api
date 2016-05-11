@@ -23,8 +23,10 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.OfficeDocumentException.DocumentPlaceholderMissingException;
 import com.mz.solutions.office.OfficeDocumentException.NoDataForDocumentGenerationException;
+import com.mz.solutions.office.extension.ExtendedValue;
 import com.mz.solutions.office.extension.Extension;
 import com.mz.solutions.office.extension.MicrosoftCustomXml;
+import com.mz.solutions.office.extension.MicrosoftInsertDoc;
 import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataTable;
@@ -61,6 +63,9 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     private static final String ZIP_DOC_DOCUMENT = "word/document.xml";
     private static final String ZIP_DOC_STYLES = "word/styles.xml";
+    private static final String ZIP_REL_RELS = "word/_rels/document.xml.rels";
+    
+    private static final String ZIP_CONTENT_TYPES = "[Content_Types].xml";
     
     /**
      * Speichert die Referenz wenn die Custom XML Erweiterung verwendet wurde;
@@ -68,9 +73,18 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
      */
     @Nullable
     private MicrosoftCustomXml extCustomXml;
+    
+    /** Speichert die Referenz zur altChunk-Erweiterung, sobald diese verwendet wurde. */
+    private InnerAltChunkExtension extAltChunk = new InnerAltChunkExtension();
+    
+    private final Document sourceRelationships;
+    private final Document sourceContentTypes;
 
     public MicrosoftDocument(OfficeDocumentFactory factory, Path document) {
         super(factory, document, ZIP_DOC_DOCUMENT, ZIP_DOC_STYLES);
+        
+        this.sourceRelationships = loadFileAsXml(ZIP_REL_RELS);
+        this.sourceContentTypes = loadFileAsXml(ZIP_CONTENT_TYPES);
     }
 
     @Override
@@ -91,6 +105,10 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
                 extCustomXml = new ZippedCustomXmlExtension();
             }
             return Optional.of((T) extCustomXml);
+        }
+        
+        if (extType == MicrosoftInsertDoc.class) {
+            return Optional.of((T) extAltChunk);
         }
         
         return Optional.empty();
@@ -127,6 +145,14 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         final Document newContent = (Document) sourceContent.cloneNode(true);
         final Document newStyles = (Document) sourceStyles.cloneNode(true);
         
+        final Document newRelationships = (Document) sourceRelationships.cloneNode(true);
+        final Document newContentTypes = (Document) sourceContentTypes.cloneNode(true);
+        
+        extAltChunk.setCurrentZipFile(outputDocument)
+                .setRelationshipDocument(newRelationships)
+                .setWordDocument(newContent)
+                .setContentTypesDocument(newContentTypes);
+        
         normalizeInstrTextFields(newContent);
         
         final Node wordBody = findDocumentBody(newContent);
@@ -143,14 +169,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             final DataPage pageData = dataPages.next();
             final Node newPageBody = wordBody.cloneNode(true);
             
-            replaceAllFields(newPageBody, pageData);
-            
-            while (newPageBody.hasChildNodes()) {
-                newWordBody.appendChild(
-                        newPageBody.removeChild(newPageBody.getFirstChild())
-                );
-            }
-            
+            // Zeilenumbruch nur Einfügen, wenn es sich NICHT um die
+            // Seite handelt
             if (firstPage == false && needToInsertPageBreak()) {
                 final Node wordBreak = newContent.createElement("w:br");
                 final NamedNodeMap attributes = wordBreak.getAttributes();
@@ -161,6 +181,17 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
                 attributes.setNamedItem(wordType);
                 
                 newWordBody.appendChild(wordBreak);
+            }
+            
+            // Ersetzen und alle Nodes in dem fortlaufenden neuen Word-Inhalt
+            // übernehmen. #removeChild(..) gibt den entfernten Node zurück.
+            
+            replaceAllFields(newPageBody, pageData);
+            
+            while (newPageBody.hasChildNodes()) {
+                newWordBody.appendChild(
+                        newPageBody.removeChild(newPageBody.getFirstChild())
+                );
             }
             
             missingData = false;
@@ -185,6 +216,9 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         
         overwrite(outputDocument, ZIP_DOC_DOCUMENT, newContent);
         overwrite(outputDocument, ZIP_DOC_STYLES, newStyles);
+        
+        overwrite(outputDocument, ZIP_REL_RELS, newRelationships);
+        overwrite(outputDocument, ZIP_CONTENT_TYPES, newContentTypes);
         
         //// EXTENSIONS DURCHLAUFEN LASSEN
         
@@ -419,6 +453,19 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             return; // Joar anderweitiger Feldbefehl
         }
         
+        // Sonderfall: Ist der zurückgegebene DataValue ein erweiterter Wert, dann muss mindestens
+        // geprüft werden ob diese Art und bekannt ist.
+        final DataValue dataValue = value.get();
+        if (dataValue.isExtendedValue()) {
+            final ExtendedValue extValue = dataValue.extendedValue();
+            
+            if (extAltChunk.isAltChunkExtValue(extValue)) {
+                // Platzhalter durch w:altChunk ersetzen
+                subReplaceFieldWithAltChunk(instrTextNode, extValue);
+                return;
+            }
+        }
+        
         // w:instrText ersetzen durch w:t oder längerer Formatierungskette
         final Node wordRun = instrTextNode.getParentNode();
         final List<Node> formattedNodes = createFormattedNodes(
@@ -528,6 +575,18 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         }
         
         return formattedNodes;
+    }
+    
+    private void subReplaceFieldWithAltChunk(Node instrTextNode, ExtendedValue extValue) {
+        // - instrTextNode -> Platzhalter vollständig (samt ABSATZ!) entfernen
+        // - Weitere Behandlung an die Erweiterungsimplementierung geben
+        final Node fieldParent = instrTextNode.getParentNode();
+        final Node contentParent = fieldParent.getParentNode();
+        
+        extAltChunk.insertAltChunkAt(instrTextNode, extValue);
+        
+        // Jetzt erst entfernen
+        //contentParent.removeChild(fieldParent);
     }
     
     private Node createWordTextNode(Document document, String textContent) {
@@ -792,6 +851,67 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         public String toString() {
             return MicrosoftCustomXml.class.getSimpleName() + "["
                     + countParts() + " Parts]";
+        }
+        
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // IMPLEMENTIERUNG DER MS ERWEITERUNG FÜR ALTERNATIVE CHUNK ELEMENTE/PLATZHALTER
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Unterklasse der Erweiterung um w:altChunk mit der Implementierung für ZIP Container.
+     */
+    private class InnerAltChunkExtension extends MicrosoftInsertDoc {
+        
+        private ZIPDocumentFile zipFile;
+        private Document wordDocument;
+        private Document relationshipDocument;
+        private Document contentTypesDocument;
+        
+        public InnerAltChunkExtension setCurrentZipFile(ZIPDocumentFile zipFile) {
+            this.zipFile = zipFile;
+            return this;
+        }
+        
+        public InnerAltChunkExtension setWordDocument(Document doc) {
+            this.wordDocument = doc;
+            return this;
+        }
+        
+        public InnerAltChunkExtension setRelationshipDocument(Document doc) {
+            this.relationshipDocument = doc;
+            return this;
+        }
+
+        @Override
+        protected Document getWordDocument() {
+            return wordDocument;
+        }
+
+        @Override
+        protected Document getRelationshipDocument() {
+            return relationshipDocument;
+        }
+
+        @Override
+        protected Document getContentTypeDocument() {
+            return this.contentTypesDocument;
+        }
+
+        @Override
+        protected void overwritePartInContainer(String partName, byte[] data) {
+            assert null != partName : "partName == null";
+            assert null != data : "data == null";
+            assert null != zipFile : "#setCurrentZipFile(null??)";
+            
+            zipFile.createNewFileInZip(partName);
+            zipFile.overwrite(partName, data);
+        }
+
+        private InnerAltChunkExtension setContentTypesDocument(Document newContentTypes) {
+            this.contentTypesDocument = newContentTypes;
+            return this;
         }
         
     }

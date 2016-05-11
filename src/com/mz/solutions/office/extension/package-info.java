@@ -43,5 +43,12 @@
  * <p>Erweiterungen sind nicht allgemein für die Office-Implementierung
  * verfügbar, sondern können vom jeweiligen Dateityp jeweils unterschiedlich
  * nutzbar sein.</p>
+ * 
+ * <p><b>Erweiterte-Werte:</b> Entsprecht einem Wert der nicht sinnvoll oder
+ * ausreichend als Zeichenkette repräsentiert werden kann und ggf. abhängig
+ * vom gewählten Office ist. Grundsätzlich sind und sollten erweiterte Werte
+ * {@link ExtendedValue}'s auch für fremde Office-Programme nicht zu
+ * Problemen führen; ggf. werden jedoch nur die alternativen Ersatzzeichenketten
+ * eingesetzt und nicht das gewünschte Objekt (z.B. Dokument, Bild etc..).</p>
  */
 package com.mz.solutions.office.extension;

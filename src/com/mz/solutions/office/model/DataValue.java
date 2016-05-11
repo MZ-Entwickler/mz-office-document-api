@@ -21,6 +21,7 @@
  */
 package com.mz.solutions.office.model;
 
+import com.mz.solutions.office.extension.ExtendedValue;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +31,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
+import javax.annotation.Nullable;
 import static mz.solutions.office.resources.DataValueKeys.CONTAINS_SPACES;
 import static mz.solutions.office.resources.DataValueKeys.KEY_TOO_SHORT;
 import static mz.solutions.office.resources.DataValueKeys.OPTIONS_IN_CONFLICT;
@@ -52,6 +54,12 @@ import static mz.solutions.office.resources.MessageResources.formatMessage;
  * muss aus mindestens 2 Zeichen bestehen und darf keine Leerzeichen enthalten.
  * Um Unterschiede zwischen Office-Implementierungen zu vermeiden, sollte der
  * Zeichenvorrat auf {@code [A-Z, a-z, 0-9, '_']} beschränkt bleiben.</p>
+ * 
+ * <p>Unabhängig der Platzhalterbezeichnung, können einzelne Office-Programme
+ * erweiterte Werte {@link ExtendedValue}'s verarbeiten. Diese werden über
+ * deren jeweilige Erweiterungsschnittstelle erzeugt und können das
+ * Standardverhalten dieser Klasse dezent verändern oder deren Funktionsweise
+ * bedingt einschränken.</p>
  * 
  * @author  Riebe, Moritz       (moritz.riebe@mz-solutions.de)
  */
@@ -87,6 +95,10 @@ public final class DataValue implements Serializable {
     private final String keyName;
     private final String value;
     
+    /** Ist mit einer Referenz belegt, sobald ein Erweiterter-Wert verwendet wird. */
+    @Nullable
+    private final ExtendedValue extValue;
+    
     /**
      * Erzeugt ein Platzhalter Bezeichner-Werte-Paar mit Vorsteinstellungen.
      * 
@@ -105,6 +117,8 @@ public final class DataValue implements Serializable {
         
         this.options = defaultOptions;
         this.value = prepareValueByOptions(value);
+        
+        this.extValue = null;
     }
     
     /**
@@ -133,6 +147,31 @@ public final class DataValue implements Serializable {
         
         this.options = prepareValueOptions(valueOptions);
         this.value = prepareValueByOptions(value);
+        
+        this.extValue = null;
+    }
+    
+    /**
+     * Erzeugt einen Platzhalter mit einem Erweiterten-Wert der nicht als reine
+     * Zeichenkette sinnvoll/verwendbar dargestellt werden kann und eine besondere
+     * Office-Abhängigkeit bedingt.
+     * 
+     * <p>Die Angabe von Optionen entfällt in diesem Falle. Die Beschränkungen
+     * des Platzhalter-Bezeichners sind mit den anderen Konstruktoren
+     * (siehe {@link #DataValue(String, String)}) identisch.</p>
+     * 
+     * @param keyName       Bezeichner des Platzhalters, nie {@code null}.
+     * 
+     * @param extValue      Erweiterter-Wert; Erzeugung durch die spezifischen
+     *                      Erweiterungsschnittstellen. Nie {@code null}.
+     */
+    
+    public DataValue(String keyName, ExtendedValue extValue) {
+        this.keyName = prepareKeyName(keyName);
+        this.options = defaultOptions;
+        
+        this.extValue = Objects.requireNonNull(extValue, "extValue");
+        this.value = prepareValueByOptions(extValue.altString());
     }
     
     private String prepareKeyName(String keyName) {
@@ -246,6 +285,39 @@ public final class DataValue implements Serializable {
         }
         
         return pValue;
+    }
+    
+    /**
+     * Liefert TRUE sobald dieser Platzhalter einen Erweiterten-Wert beinhaltet.
+     * 
+     * <p>Siehe für erweiterte Werte: {@link ExtendedValue}.</p>
+     * 
+     * @return  {@code true}, wenn es sich hierbei um einen erweiterten Wert handelt.
+     */
+    public boolean isExtendedValue() {
+        return null != extValue;
+    }
+    
+    /**
+     * Liefert die Implementierung des erweiterten Wertes zurück sobald dieser
+     * Platzhalterwert auch wirklich erweitert ist, ansonsten Exception.
+     * 
+     * <p>Siehe für erweiterte Werte: {@link ExtendedValue}. Liegt kein Wert vor, wird eine
+     * {@link IllegalStateException} geworfen; um dies zu vermeiden ist bitte die Prüfmethode
+     * {@link #isExtendedValue()} vorher zu verwenden!</p>
+     * 
+     * @return  Erweiterter Wert, nie {@code null}. Liegt kein Wert vor, wird eine
+     *          Exception geworfen.
+     * 
+     * @throws  IllegalStateException
+     *          Für den Fall, das dies kein erweiterter Wert ist. Die Exception-Message ist
+     *          nur für die interne Verwendung gedacht und vorgesehen.
+     */
+    public ExtendedValue extendedValue() {
+        if (null == extValue) {
+            throw new IllegalStateException("(Internal) @see JavaDoc");
+        }
+        return extValue;
     }
     
     /**

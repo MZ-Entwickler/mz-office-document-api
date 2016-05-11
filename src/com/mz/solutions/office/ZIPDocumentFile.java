@@ -154,6 +154,29 @@ final class ZIPDocumentFile {
         return item.get();
     }
     
+    /**
+     * Legt einen neuen Eintrag für den übergebenen Dateinamen in der ZIP Datei ab.
+     * 
+     * <p>Nach dem Anlegen kann mit {@link #overwrite(String, byte[])} entsprechend der Inhalt
+     * geschrieben werden.</p>
+     * 
+     * @param fileName      Dateiname
+     */
+    public void createNewFileInZip(String fileName) {
+        final ZipFileItem zipItem = new ZipFileItem();
+        
+        zipItem.zipEntry = new ZipEntry(fileName);
+        
+        zipItem.zipEntry.setSize(0);
+        zipItem.zipEntry.setCompressedSize(-1L);
+        
+        zipItem.zipEntry.setCreationTime(FileTime.from(Instant.now()));
+        zipItem.zipEntry.setLastAccessTime(FileTime.from(Instant.now()));
+        zipItem.zipEntry.setLastModifiedTime(FileTime.from(Instant.now()));
+        
+        this.zipItems.add(zipItem);
+    }
+    
     public ZIPDocumentFile overwrite(String name, byte[] data) {
         final ZipFileItem zipItem = findItemByName(name);
         
