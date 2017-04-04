@@ -24,6 +24,9 @@ Es wird Java 1.8 benötigt.
 Im Verzeichnis 'examples' findest du min. ein Beispiel, dessen Code kommentiert ist. Ansonsten
 müssten die JavaDoc-Kommentare (inkl. Package-Infos) doch recht ausführlich sein.
 
+__Grundsätzlich sollte die JavaDoc-Doku  mehr als ausreichend und genau sein. Wenn du dir nicht nur
+die Klassen anschaust, sondert auch die Package-Infos, dann ist dies doch relativ viel. :-) __
+
 # Einstieg - com.mz.solutions.office
 Jeder Vorgang zum Befüllen von Textdokumenten (*.odt, *.docx, *.doct) bedarf eines
 Dokumenten-Daten-Modelles das im Unterpackage 'model' zu finden ist. Nach dem Erstellen/
@@ -137,5 +140,99 @@ _Tabellenbezeichner_ können in Word nicht direkt vergeben werden. Um einer Tabe
 _Kopf- und Fußzeilen_ werden in Word nicht ersetzt und sollten maximal Word-bekannte Feldbefehle enthalten.
 
 Word-Dokumente ab Version 2007 im Open XML Document Format (DOCX) werden unterstützt.
+
+# Daten-Modell - com.mz.solutions.office.model
+Kurzlebiges Daten-Modell zur Strukturierung und späteren Befüllung von Office Dokumenten/Reports.
+
+##Grundlegend:
+Das zur Befüllung von Dokumenten verwendete Daten-Modell ist ein kurzlebiges Modell das nur dem Zweck der Strukturierung dient. Langfristige Datenhaltung und Modellierung stehen dabei nicht im Vordergrund. Alle Modell-Klassen implementieren lediglich Funktionalität zum Hinzufügen von Bezeichner-Werte- Paaren, Tabellen und Tabellenzeilen. Eine Mutation dieser (Entfernen, Neusortieren, ...) ist nicht vorgesehen und sollte im eigenen Domain-Modell bereits erfolgt sein. Datenmodell können manuell zusammengestellt werden oder aus einer externen Quelle bezogen werden. Die Unter-Packages json und xml dienen als Implementierung zum Laden von vorbereiteten externen Datenmodellen. Die Serialisierung (und damit auch das Laden und Speichern) können alternativ ebenfalls verwendet werden.
+
+##Wurzelelement DataPage des Dokumenten-Objekt-Modells:
+Jedes Dokument (oder jede Serie von Dokumenten/Seiten) beginnen immer mit einer Instanz von DataPage. Eine Instanz von DataPage entspricht immer einem einzelnen Dokumentes oder einer Seite oder mehrerer Seiten. Die entsprechende Interpretation ist dabei abhängig, wie das Datenmodell später übergeben wird.
+
+##Bezeichner-Werte-Paare / Untermengen (Tabellen / Tabellenzeilen):
+Die unterschiedlichen Modell-Klassen übernehmen unterschiedliche Einträge und Strukturen auf. Die folgende Auflistung sollte dabei verdeutlichen wie die Struktur von Dokumenten ist.
+
+```
+ 
+  x.add(y)     | DataPage    DataTable   DataTableRow    DataValue
+  -------------+--------------------------------------------------------------
+  DataPage     | NEIN        JA          NEIN            JA
+  DataTable    | NEIN        NEIN        JA              JA
+  DataTableRow | NEIN        JA          NEIN            JA*
+  DataValue    | NEIN        NEIN        NEIN            NEIN
+ 
+  * Einfache DataValue's in DataTableRow, werden zum Ersetzen der Kopf und
+    der Fußzeile verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
+``` 
+ 
+Dabei ist zu beachten, dass DataTable und DataValue benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede Instanz von DataValue besitzt einen Bezeichner (den Platzhalter) und jede Tabelle DataTable besitzt eine unsichtbare Tabellenbezeichnung die entweder direkt von Office als Name angegeben wird (so bei Open-Office) oder indirekt per Textmarker in der ersten Tabellenzelle versteckt angegeben wird (so bei Microsoft Office) da keine offizielle Tabellenbenennung möglich ist. Zu den genauen Unterschieden im Umgang mit Platzhaltern und Tabellennamen sollte die Package-Dokumentation von com.mz.solutions.office herangezogen werden.
+
+__Beispiel:__
+
+```java
+  // Angaben im Hauptdokument
+  DataPage invoiceDocument = new DataPage();
+  invoiceDocument.addValue(new DataValue("Nachname", "Mustermann"));
+  invoiceDocument.addValue(new DataValue("Vorname", "Max"));
+  invoiceDocument.addValue(new DataValue("ReDatum", "2015-01-01"));
+ 
+  // Tabelle mit den Rechnungsposten
+  DataTable invoiceItems = new DataTable("Rechnungsposten");
+ 
+  DataTableRow invItemRow1 = new DataTableRow();
+  invItemRow1.addValue(new DataValue("PostenNr", "1"));
+  invItemRow1.addValue(new DataValue("Artikel", "Pepsi Cola 1L"));
+  invItemRow1.addValue(new DataValue("Preis", "1.70"))
+ 
+  DataTableRow invItemRow2 = new DataTableRow();
+  invItemRow2.addValues(   // Es gibt auch Vereinfachungen
+          new DataValue("PostenNr", "2"),
+          new DataValue("Artikel", "Kondensmilch"),
+          new DataValue("Preis", "0.65"));
+ 
+  // Hinzufügen der Zeilen; Reichenfolge ist relevant
+  invoiceItems.addTableRow(invItemRow1);
+  invoiceItems.addTableRow(invItemRow2);
+ 
+  // Tabelle dem Dokument/ der Seite hinzufügen
+  invoiceDocument.addTable(invoiceItems);
+ 
+  // ...
+ 
+```
+
+# Schreiben der Ausgabe-Dokumente - com.mz.solutions.office.result
+Der API wird eigentlich nicht direkt gesagt wo die Datei gespeichert werden soll. Wir haben dies,
+da die Bibliothek auch server-seitig eingesetzt wird, soweit es geht umgangen.
+
+Ziel und Art der Speicherung können selbst implementiert werden, indem die Schnittstelle Result implementiert wird. Alternativ können vordefinierte Implementierungen genutzt werden.
+
+```java
+  // Nutzen von fertigen Implementierungen
+  Result resultToFile = ResultFactory.toFile(Paths.get("output.docx"));
+ 
+  // oder per Lambda-Ausdruck
+  Result resultToLambda = (data) -> System.out.println(Arrays.toString(data));
+ 
+  // oder klassisch
+  Result resultToInnerClass = new Result() {
+      public void writeResult(byte[] dataToWrite) throws IOException {
+          System.out.println(Arrays.toString(dataToWrite));
+      };
+  };
+ 
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
