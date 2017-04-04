@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -19,20 +19,30 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mz.solutions.office.model;
+package com.mz.solutions.office;
 
-import java.util.Locale;
-import org.junit.BeforeClass;
+import java.util.Arrays;
+import java.util.zip.ZipEntry;
 
 /**
  *
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
-public class DataValueLangGermanTest extends DataValueTest {
+final class ZippedEntry {
     
-    @BeforeClass
-    public static void setUpClass() {
-        Locale.setDefault(Locale.GERMANY);
+    ZipEntry entry;
+    byte[] data;
+    
+    public ZippedEntry cloneEntry() {
+        final ZippedEntry copy = new ZippedEntry();
+        
+        if (null != data) {
+            copy.data = Arrays.copyOf(data, data.length);
+        }
+        
+        copy.entry = new ZipEntry(entry);
+        
+        return copy;
     }
     
 }

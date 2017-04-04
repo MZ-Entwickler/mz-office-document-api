@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -35,6 +35,7 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -76,6 +77,9 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     /** Speichert die Referenz zur altChunk-Erweiterung, sobald diese verwendet wurde. */
     private InnerAltChunkExtension extAltChunk = new InnerAltChunkExtension();
+
+    /** Interceptor-Context für Lazy-Callbacks, wird bei jedem Platzhaler neu initialisiert. */
+    private MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
     private final Document sourceRelationships;
     private final Document sourceContentTypes;
@@ -453,9 +457,13 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             return; // Joar anderweitiger Feldbefehl
         }
         
+        // Beim Ermitteln des Inhaltes, auf Interceptor prüfen und entsprechend zuvor den Context
+        // dazu einrichten.
+        interceptionContext.init(keyName, values);
+        
         // Sonderfall: Ist der zurückgegebene DataValue ein erweiterter Wert, dann muss mindestens
         // geprüft werden ob diese Art und bekannt ist.
-        final DataValue dataValue = value.get();
+        final DataValue dataValue = handleInterception(value.get(), interceptionContext);
         if (dataValue.isExtendedValue()) {
             final ExtendedValue extValue = dataValue.extendedValue();
             
@@ -469,7 +477,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         // w:instrText ersetzen durch w:t oder längerer Formatierungskette
         final Node wordRun = instrTextNode.getParentNode();
         final List<Node> formattedNodes = createFormattedNodes(
-                instrTextNode, value.get());
+                instrTextNode, dataValue);
         
         for (Node formattedNode : formattedNodes) {
             wordRun.insertBefore(formattedNode, instrTextNode);
@@ -912,6 +920,49 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         private InnerAltChunkExtension setContentTypesDocument(Document newContentTypes) {
             this.contentTypesDocument = newContentTypes;
             return this;
+        }
+        
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // INTERCEPTION-CONTEXT FÜR MS DOKUMENTE
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    private class MyInterceptionContext extends InterceptionContext {
+        
+        private String placeholder;
+        private DataValueMap<?> valueMap;
+        
+        public void init(String placeholder, DataValueMap<?> valueMap) {
+            this.placeholder = placeholder;
+            this.valueMap = valueMap;
+        }
+        
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        @Override
+        public OfficeDocumentFactory getDocumentFactory() {
+            return MicrosoftDocument.this.getRelatedFactory();
+        }
+
+        @Override
+        public OfficeDocument getDocument() {
+            return MicrosoftDocument.this;
+        }
+
+        @Override
+        public String getPlaceholderName() {
+            return placeholder;
+        }
+
+        @Override
+        public DataValueMap<?> getParentValueMap() {
+            return valueMap;
+        }
+
+        @Override
+        public boolean isXmlBasedDocument() {
+            return true;
         }
         
     }

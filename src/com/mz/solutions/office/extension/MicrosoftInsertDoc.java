@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
+import static mz.solutions.office.resources.MessageResources.formatMessage;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -293,7 +294,8 @@ public abstract class MicrosoftInsertDoc implements Extension {
                 .byFileExtension(docToImport);
         
         if (opDocFormat.isPresent() == false) {
-            throw new IllegalStateException("Unbekanntes Dateiformat: \"" + docToImport + "\"");
+            throw new IllegalStateException(formatMessage(
+                    "MicrosoftInsertDoc_UnknownFileFormat", docToImport));
         }
         
         return insertFile(docToImport, opDocFormat.get());
@@ -344,8 +346,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
         }
         
         private String createExceptionMessage() {
-            return "Fehler beim Laden des Dokumentes \"" + importFile
-                    + "\". Dokument kann nicht eingefügt werden.";
+            return formatMessage("MicrosoftInsertDoc_FailedToLoad", importFile);
         }
         
         /**

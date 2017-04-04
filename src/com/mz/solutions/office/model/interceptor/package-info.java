@@ -19,33 +19,19 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mz.solutions.office.result;
-
-import java.io.IOException;
 
 /**
- * Schnittstelle zum Abspeichern von generierten Dokumenten.
+ * Package für die Verwendung von Value-Interceptoren.
  * 
- * <p>Implementierungshinweise finden sich in der Package-Beschreibung;
- * Fertige Implementierungen sind über {@link ResultFactory} zugänglich.
+ * <p>Jede Office-Implementierung unterstützt (derzeit) Value-Interceptors im Daten-Modell. Jeder
+ * {@link ValueInterceptor} entspricht einem erweiterten Wert {@code ExtendedValue} und kann direkt
+ * im Daten-Modell (z.B. {@code DataPage}, {@code DataTableRow}, ..) verwendet werden. Werte von
+ * Interceptoren werden erst <b>bei Bedarf und Notwendigkeit</b> erzeugt und <b>nicht gecached</b>.
+ * Value-Interceptors sind geeignet für aufwendig zu ladende, bauende Platzhalterwerte die wirklich
+ * nur bei Notwendigkeit erzeugt werden sollen und/ oder Werte die in Abhängigkeit zum gewählten
+ * Dokument/ Datensatz/ etc.. erzeugt werden müssen.</p>
  * 
- * @see     ResultFactory Vorimplementierungen
- * 
- * @author  Riebe, Moritz   (moritz.riebe@mz-solutions.de)
+ * <p>Für den Einstieg sollte die Dokumentation in {@link ValueInterceptor} und
+ * {@link ValueInterceptorFunction} gelesen werden.</p>
  */
-@FunctionalInterface
-public interface Result {
-
-    /**
-     * Schreibt das übergebene Byte-Array zum gewünschten Ziel.
-     * 
-     * <p>Im Falle einer Exception sollten alle Ressourcen freigegeben sein. Die
-     * Exception kann trotzdem geworfen werden und wird hochgereicht.</p>
-     * 
-     * @param dataToWrite   Byte-Array (des Dokumentes) das zu schreiben ist
-     * 
-     * @throws IOException  IO/Fehler; Exception darf geworfen werden
-     */
-    public void writeResult(byte[] dataToWrite) throws IOException;
-    
-}
+package com.mz.solutions.office.model.interceptor;

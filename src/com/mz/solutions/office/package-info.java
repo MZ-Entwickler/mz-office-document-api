@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,8 @@
 
 /**
  * Schnittstelle zum Öffnen und Befüllen von Dokumenten/ Reports für Apache
- * OpenOffice und Microsoft Office.
+ * OpenOffice und Microsoft Office; hier die Package-Beschreibung lesen für den Einstieg
+ * zur Nutzung dieser API/Bibliothek.
  * 
  * <p><b>Einstieg:</b><br>
  * Jeder Vorgang zum Befüllen von Textdokumenten (*.odt, *.docx, *.doct) bedarf

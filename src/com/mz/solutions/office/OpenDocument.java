@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,7 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     
     private static final String ZIP_DOC_CONTENT = "content.xml";
     private static final String ZIP_DOC_STYLES = "styles.xml";
+    
+    private final MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
     public OpenDocument(OfficeDocumentFactory factory, Path document) {
         super(factory, document, ZIP_DOC_CONTENT, ZIP_DOC_STYLES);
@@ -238,7 +241,9 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                             /* {0} */ fieldName));
         }
         
-        final DataValue dataValue = value.get();
+        interceptionContext.init(fieldName, values);
+        
+        final DataValue dataValue = handleInterception(value.get(), interceptionContext);
         final Set<ValueOptions> options = dataValue.getValueOptions();
         
         final boolean isSimpleText =
@@ -339,4 +344,46 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         return new GenericNodeIterator(rootNode, "text:user-field-get")
                 .noRecursionByElements("table:table");
     }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // INTERCEPTION CONTEXT FÜR DIE VERWENDUNG VON VALUE-INTERCEPTOR'S
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    private class MyInterceptionContext extends InterceptionContext {
+
+        private String placeholder;
+        private DataValueMap<?> valueMap;
+        
+        public void init(String placeholder, DataValueMap<?> valueMap) {
+            this.placeholder = placeholder;
+            this.valueMap = valueMap;
+        }
+        
+        @Override
+        public OfficeDocumentFactory getDocumentFactory() {
+            return OpenDocument.this.getRelatedFactory();
+        }
+
+        @Override
+        public OfficeDocument getDocument() {
+            return OpenDocument.this;
+        }
+
+        @Override
+        public String getPlaceholderName() {
+            return placeholder;
+        }
+
+        @Override
+        public DataValueMap<?> getParentValueMap() {
+            return valueMap;
+        }
+
+        @Override
+        public boolean isXmlBasedDocument() {
+            return true;
+        }
+        
+    }
+    
 }

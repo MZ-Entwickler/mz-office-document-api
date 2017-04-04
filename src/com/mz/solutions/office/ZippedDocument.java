@@ -19,21 +19,40 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package mz.solutions.office.resources;
+package com.mz.solutions.office;
 
-import com.mz.solutions.office.model.DataValue; // JavaDoc
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
- * Intern - Schlüssel für die lokalisierten Texte für {@link DataValue}.
- * 
+ *
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
-public interface DataValueKeys {
+final class ZippedDocument {
     
-    static final String KEY_TOO_SHORT = "DataValue_KeyTooShort";
-    static final String CONTAINS_SPACES = "DataValue_ContainsWhiteSpaces";
-    static final String TOO_MANY_VALUE_OPTIONS = "DataValue_TooManyValueOptions";
-    static final String OPTIONS_IN_CONFLICT = "DataValue_OptionsInConflict";
-    static final String UNKNOWN_OPTION_STATE = "DataValue_UnknownOptionState";
+    private final List<ZippedEntry> entries = new ArrayList<>();
+    
+    public ZippedDocument(InputStream inSource) {
+        try (ZipInputStream inZip = new ZipInputStream(inSource)) {
+            readEntries(inZip);
+        } catch (IOException ioException) {
+            throw new UncheckedIOException(ioException);
+        }
+    }
+
+    private void readEntries(ZipInputStream inZip) throws IOException {
+        ZipEntry currentEntry;
+        while (null != (currentEntry = inZip.getNextEntry())) {
+            final ZippedEntry newEntry = new ZippedEntry();
+            
+            newEntry.entry = currentEntry;
+            
+        }
+    }
     
 }

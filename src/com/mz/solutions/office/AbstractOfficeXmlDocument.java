@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2016,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
+ * Copyright (C) 2017,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,8 @@ package com.mz.solutions.office;
 import com.mz.solutions.office.OfficeDocumentException.FailedDocumentGenerationException;
 import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForImplementation;
 import com.mz.solutions.office.model.DataPage;
+import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -226,6 +228,14 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
                 .getProperty(OfficeProperty.ERR_ON_NO_DATA);
         
         return Boolean.FALSE.equals(errOnNoData);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
+    // UMGANG MIT INTERCEPTOR-VALUES (CALLBACK MECHANISMUS)
+    ////////////////////////////////////////////////////////////////////////////
+    
+    protected DataValue handleInterception(DataValue value, InterceptionContext context) {
+        return ValueInterceptorUtil.callInterceptors(value, context);
     }
     
     ////////////////////////////////////////////////////////////////////////////
