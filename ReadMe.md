@@ -2,7 +2,7 @@
 Bibliothek zum Ausfüllen von DOCX (Microsoft Word ab 2007) und ODT (Open-/LibrOffice) Dokumenten
 die Platzhalter oder Tabellen (auch ineinander verschachtelte Tabellen) beinhalten.
 
-Zur Erstellung der Dokumente wird ein einheitliches Daten-Modell (_com.mz.solutions.office.model_)
+Zur Erstellung der Dokumente wird ein einheitliches Daten-Modell (`com.mz.solutions.office.model`)
 verwendet, das unabhängig des Dokumenten-Formates (docx/odt) verwendbar ist.
 
 Für Microsoft Word liegt eine Erweiterung vor zur Nutzung von Custom XML Parts mit denen
@@ -21,7 +21,7 @@ frei verfügbar und verwendbar.
 Es wird Java 1.8 benötigt.
 
 # Beispiele
-Im Verzeichnis 'examples' findest du min. ein Beispiel, dessen Code kommentiert ist. Ansonsten
+Im Verzeichnis `examples` findest du min. ein Beispiel, dessen Code kommentiert ist. Ansonsten
 müssten die JavaDoc-Kommentare (inkl. Package-Infos) doch recht ausführlich sein.
 
 __Grundsätzlich__ sollte die JavaDoc-Doku  mehr als ausreichend und genau sein. Wenn du dir nicht nur
@@ -63,7 +63,7 @@ immer das Dokumenten-Daten-Modell vollständig.
 
 ## Konfiguration der Factory
 Mögliche Konfigurationseigenschaften die für alle Implementierungen gültig sind finden sich in 
-OfficeProperty; Implementierungs-spezifische in eigenen Klassen (z.B. MicrosoftProperty). Die 
+`OfficeProperty`; Implementierungs-spezifische in eigenen Klassen (z.B. `MicrosoftProperty`). Die 
 Factory ist nicht thread-safe und eine Änderung der Konfiguration wikt sich auf alle bereits 
 geöffneten, zukünftig zu öffnenden und derzeit in Bearbeitung befindlichen Dokumente aus.
 
@@ -110,7 +110,7 @@ das fehlende Platzhalter ignoriert werden sollen, werden diese Platzhalter nicht
 belassen sondern aus dem Dokument entfernt. Die umgebende Schriftformatierung von Platzhaltern 
 wird im Ausgabedokument beibehalten. 
 
-_Seitenumbrüche_ sind in OpenOffice nie hart-kodiert (im Gegensatz zu Microsoft Office) und ergeben sich lediglich aus den Formatierungsangaben von Absätzen. Soll nach jeder DataPage ein Seitenumbruch erfolgen, muss im aller ersten Absatz des Dokumentes eingestellt sein, das (Paragraph -> Text Flow -> Breaks) vor dem Absatz immer ein Seitenumbruch zu erfolgen hat. Ansonsten werden alle DataPages nur hintereinander angefügt ohne gewünschten Seitenumbruch.
+_Seitenumbrüche_ sind in OpenOffice nie hart-kodiert (im Gegensatz zu Microsoft Office) und ergeben sich lediglich aus den Formatierungsangaben von Absätzen. Soll nach jeder `DataPage` ein Seitenumbruch erfolgen, muss im aller ersten Absatz des Dokumentes eingestellt sein, das (Paragraph -> Text Flow -> Breaks) vor dem Absatz immer ein Seitenumbruch zu erfolgen hat. Ansonsten werden alle `DataPage`s nur hintereinander angefügt ohne gewünschten Seitenumbruch.
 
 _Tabellenbezeichung_ wird in OpenOffice direkt in den Eigenschaften der Tabelle unter "Name" hinterlegt. Der Name muss in Großbuchstaben eingetragen werden.
 
@@ -119,21 +119,21 @@ _Kopf- und Fußzeilen_ werden beim Ersetzungsvorgang nicht berücksichtigt und s
 Es werden ODF Dateien ab Version 1.1 unterstützt; nicht zu verwechseln mit der OpenOffice Versionummerierung.
 
 ## [Spezifisch] Microsoft Office
-_Platzhalter_ sind Feldbefehle und ensprechen den normalen Platzhaltern in Word (MERGEFIELD). Die Groß- und Kleinschreibung ist dabei unrelevant, sollte aber am Besten groß sein. Ein mögliches MERGEFIELD ohne Beispieltext sieht wie folgt aus:
+_Platzhalter_ sind Feldbefehle und ensprechen den normalen Platzhaltern in Word (`MERGEFIELD`). Die Groß- und Kleinschreibung ist dabei unrelevant, sollte aber am Besten groß sein. Ein mögliches `MERGEFIELD` ohne Beispieltext sieht wie folgt aus:
 
 ```
   { MERGEFIELD RECHNUNGSNR \* MERGEFORMAT }
 ```
 
-Die geschweiften Klammern sollen dabei die Feld-Klammern von Word repräsentieren. Alternativ können auch Dokumenten-Variablen als Platzhalter missbraucht werden.
+Die geschweiften Klammern sollen dabei die Feld-Klammern von Word repräsentieren. Alternativ können auch Dokumenten-Variablen als Platzhalter missbraucht werden. Wichtig: Nicht in Word einfach geschweifte Klammern schreiben! Die geschweiften Klammern werden mit `STRG+F9` erzeugt und sind in Word besondere Feldbefehle.
 
 ```
   { DOCVARIABLE RECHNUNGSNR }
 ```
 
-Dokumentvariablen sollten dann jedoch keinerlei Verwendung in VBA (Visual Basic for Applications) Makros finden. Letzte Möglichkeit ist die Angabe eines unbekannten Feld-Befehls der nur den Namen des Platzhalters trägt. Diese Form sollte vermieden werden und ist nur implementiert um Fehlanwendung zu tolerieren. Ein vollständiges MERGEFIELD ist grundsätzlich die beste Option! Erweiterte MERGEFIELD Formatierungen/ Parameter (Datumsformatierungen, Ersatzwerte, ...) werden ignoriert und entfernt. Platzhalter übernehmen die umgebende Formatierung; im Feldbefehl selbst angegebene Formatierung, was eigentlich untypisch ist und nur durch spezielle Word-Kenntnisse möglich ist, werden ignoriert und aus dem Dokument entfernt.
+Dokumentvariablen sollten dann jedoch keinerlei Verwendung in VBA (Visual Basic for Applications) Makros finden. Letzte Möglichkeit ist die Angabe eines unbekannten Feld-Befehls der nur den Namen des Platzhalters trägt. Diese Form sollte vermieden werden und ist nur implementiert um Fehlanwendung zu tolerieren. Ein vollständiges `MERGEFIELD` ist grundsätzlich die beste Option! Erweiterte `MERGEFIELD` Formatierungen/ Parameter (Datumsformatierungen, Ersatzwerte, ...) werden ignoriert und entfernt. Platzhalter übernehmen die umgebende Formatierung; im Feldbefehl selbst angegebene Formatierung, was eigentlich untypisch ist und nur durch spezielle Word-Kenntnisse möglich ist, werden ignoriert und aus dem Dokument entfernt.
 
-_Seitenumbrüche_ können weich (per Absatzformatierung) oder hart (per Einstellung nach jeder DataPage) in Word gesetzt werden. Harte Seitenumbrüche sollten (wenn Seitenumbrüche erwünscht sind) bevorzugt werden.
+_Seitenumbrüche_ können weich (per Absatzformatierung) oder hart (per Einstellung nach jeder `DataPage`) in Word gesetzt werden. Harte Seitenumbrüche sollten (wenn Seitenumbrüche erwünscht sind) bevorzugt werden.
 
 _Tabellenbezeichner_ können in Word nicht direkt vergeben werden. Um einer Tabelle eine Bezeichnung/ Name zu vergeben, muss in der ersten Zelle ein unsichtbarer Textmarker hinterlegt werden, dessen Name in Großbuchstaben den Namen der Tabelle markiert.
 
@@ -145,10 +145,10 @@ Word-Dokumente ab Version 2007 im Open XML Document Format (DOCX) werden unterst
 Kurzlebiges Daten-Modell zur Strukturierung und späteren Befüllung von Office Dokumenten/Reports.
 
 _Grundlegend:_
-Das zur Befüllung von Dokumenten verwendete Daten-Modell ist ein kurzlebiges Modell das nur dem Zweck der Strukturierung dient. Langfristige Datenhaltung und Modellierung stehen dabei nicht im Vordergrund. Alle Modell-Klassen implementieren lediglich Funktionalität zum Hinzufügen von Bezeichner-Werte- Paaren, Tabellen und Tabellenzeilen. Eine Mutation dieser (Entfernen, Neusortieren, ...) ist nicht vorgesehen und sollte im eigenen Domain-Modell bereits erfolgt sein. Datenmodell können manuell zusammengestellt werden oder aus einer externen Quelle bezogen werden. Die Unter-Packages json und xml dienen als Implementierung zum Laden von vorbereiteten externen Datenmodellen. Die Serialisierung (und damit auch das Laden und Speichern) können alternativ ebenfalls verwendet werden.
+Das zur Befüllung von Dokumenten verwendete Daten-Modell ist ein kurzlebiges Modell das nur dem Zweck der Strukturierung dient. Langfristige Datenhaltung und Modellierung stehen dabei nicht im Vordergrund. Alle Modell-Klassen implementieren lediglich Funktionalität zum Hinzufügen von Bezeichner-Werte- Paaren, Tabellen und Tabellenzeilen. Eine Mutation dieser (Entfernen, Neusortieren, ...) ist nicht vorgesehen und sollte im eigenen Domain-Modell bereits erfolgt sein. Datenmodell können manuell zusammengestellt werden oder aus einer externen Quelle bezogen werden. Die Unter-Packages `json` und `xml` (in der GitHub Version noch nicht verfügbar, da noch im Beta-Status) dienen als Implementierung zum Laden von vorbereiteten externen Datenmodellen. Die Serialisierung (und damit auch das Laden und Speichern) können alternativ ebenfalls verwendet werden.
 
 _Wurzelelement DataPage des Dokumenten-Objekt-Modells:_
-Jedes Dokument (oder jede Serie von Dokumenten/Seiten) beginnen immer mit einer Instanz von DataPage. Eine Instanz von DataPage entspricht immer einem einzelnen Dokumentes oder einer Seite oder mehrerer Seiten. Die entsprechende Interpretation ist dabei abhängig, wie das Datenmodell später übergeben wird.
+Jedes Dokument (oder jede Serie von Dokumenten/Seiten) beginnen immer mit einer Instanz von `DataPage`. Eine Instanz von `DataPage` entspricht immer einem einzelnen Dokumentes oder einer Seite oder mehrerer Seiten. Die entsprechende Interpretation ist dabei abhängig, wie das Datenmodell später übergeben wird.
 
 _Bezeichner-Werte-Paare / Untermengen (Tabellen / Tabellenzeilen):_
 Die unterschiedlichen Modell-Klassen übernehmen unterschiedliche Einträge und Strukturen auf. Die folgende Auflistung sollte dabei verdeutlichen wie die Struktur von Dokumenten ist.
@@ -166,7 +166,7 @@ Die unterschiedlichen Modell-Klassen übernehmen unterschiedliche Einträge und 
     der Fußzeile verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
 ``` 
  
-Dabei ist zu beachten, dass DataTable und DataValue benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede Instanz von DataValue besitzt einen Bezeichner (den Platzhalter) und jede Tabelle DataTable besitzt eine unsichtbare Tabellenbezeichnung die entweder direkt von Office als Name angegeben wird (so bei Open-Office) oder indirekt per Textmarker in der ersten Tabellenzelle versteckt angegeben wird (so bei Microsoft Office) da keine offizielle Tabellenbenennung möglich ist. Zu den genauen Unterschieden im Umgang mit Platzhaltern und Tabellennamen sollte die Package-Dokumentation von com.mz.solutions.office herangezogen werden.
+Dabei ist zu beachten, dass `DataTable` und `DataValue` benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede Instanz von `DataValue` besitzt einen Bezeichner (den Platzhalter) und jede Tabelle `DataTable` besitzt eine unsichtbare Tabellenbezeichnung die entweder direkt von Office als Name angegeben wird (so bei Open-Office) oder indirekt per Textmarker in der ersten Tabellenzelle versteckt angegeben wird (so bei Microsoft Office) da keine offizielle Tabellenbenennung möglich ist. Zu den genauen Unterschieden im Umgang mit Platzhaltern und Tabellennamen sollte die Package-Dokumentation von `com.mz.solutions.office` herangezogen werden.
 
 __Beispiel:__
 
