@@ -24,8 +24,8 @@ Es wird Java 1.8 benötigt.
 Im Verzeichnis 'examples' findest du min. ein Beispiel, dessen Code kommentiert ist. Ansonsten
 müssten die JavaDoc-Kommentare (inkl. Package-Infos) doch recht ausführlich sein.
 
-__Grundsätzlich sollte die JavaDoc-Doku  mehr als ausreichend und genau sein. Wenn du dir nicht nur
-die Klassen anschaust, sondert auch die Package-Infos, dann ist dies doch relativ viel. :-) __
+__Grundsätzlich__ sollte die JavaDoc-Doku  mehr als ausreichend und genau sein. Wenn du dir nicht nur
+die Klassen anschaust, sondert auch die Package-Infos, dann ist dies doch relativ viel. :-)
 
 # Einstieg - com.mz.solutions.office
 Jeder Vorgang zum Befüllen von Textdokumenten (*.odt, *.docx, *.doct) bedarf eines
@@ -144,13 +144,13 @@ Word-Dokumente ab Version 2007 im Open XML Document Format (DOCX) werden unterst
 # Daten-Modell - com.mz.solutions.office.model
 Kurzlebiges Daten-Modell zur Strukturierung und späteren Befüllung von Office Dokumenten/Reports.
 
-##Grundlegend:
+_Grundlegend:_
 Das zur Befüllung von Dokumenten verwendete Daten-Modell ist ein kurzlebiges Modell das nur dem Zweck der Strukturierung dient. Langfristige Datenhaltung und Modellierung stehen dabei nicht im Vordergrund. Alle Modell-Klassen implementieren lediglich Funktionalität zum Hinzufügen von Bezeichner-Werte- Paaren, Tabellen und Tabellenzeilen. Eine Mutation dieser (Entfernen, Neusortieren, ...) ist nicht vorgesehen und sollte im eigenen Domain-Modell bereits erfolgt sein. Datenmodell können manuell zusammengestellt werden oder aus einer externen Quelle bezogen werden. Die Unter-Packages json und xml dienen als Implementierung zum Laden von vorbereiteten externen Datenmodellen. Die Serialisierung (und damit auch das Laden und Speichern) können alternativ ebenfalls verwendet werden.
 
-##Wurzelelement DataPage des Dokumenten-Objekt-Modells:
+_Wurzelelement DataPage des Dokumenten-Objekt-Modells:_
 Jedes Dokument (oder jede Serie von Dokumenten/Seiten) beginnen immer mit einer Instanz von DataPage. Eine Instanz von DataPage entspricht immer einem einzelnen Dokumentes oder einer Seite oder mehrerer Seiten. Die entsprechende Interpretation ist dabei abhängig, wie das Datenmodell später übergeben wird.
 
-##Bezeichner-Werte-Paare / Untermengen (Tabellen / Tabellenzeilen):
+_Bezeichner-Werte-Paare / Untermengen (Tabellen / Tabellenzeilen):_
 Die unterschiedlichen Modell-Klassen übernehmen unterschiedliche Einträge und Strukturen auf. Die folgende Auflistung sollte dabei verdeutlichen wie die Struktur von Dokumenten ist.
 
 ```
