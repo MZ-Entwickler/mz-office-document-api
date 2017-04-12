@@ -158,12 +158,12 @@ Die unterschiedlichen Modell-Klassen übernehmen unterschiedliche Einträge und 
   x.add(y)     | DataPage    DataTable   DataTableRow    DataValue
   -------------+--------------------------------------------------------------
   DataPage     | NEIN        JA          NEIN            JA
-  DataTable    | NEIN        NEIN        JA              JA
-  DataTableRow | NEIN        JA          NEIN            JA*
+  DataTable    | NEIN        NEIN        JA              JA*
+  DataTableRow | NEIN        JA          NEIN            JA
   DataValue    | NEIN        NEIN        NEIN            NEIN
  
-  * Einfache DataValue's in DataTableRow, werden zum Ersetzen der Kopf und
-    der Fußzeile verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
+  * Einfache DataValue's in DataTable, werden zum Ersetzen der Kopf und
+    der Fußzeile in der Tabelle verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
 ``` 
  
 Dabei ist zu beachten, dass `DataTable` und `DataValue` benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede Instanz von `DataValue` besitzt einen Bezeichner (den Platzhalter) und jede Tabelle `DataTable` besitzt eine unsichtbare Tabellenbezeichnung die entweder direkt von Office als Name angegeben wird (so bei Open-Office) oder indirekt per Textmarker in der ersten Tabellenzelle versteckt angegeben wird (so bei Microsoft Office) da keine offizielle Tabellenbenennung möglich ist. Zu den genauen Unterschieden im Umgang mit Platzhaltern und Tabellennamen sollte die Package-Dokumentation von `com.mz.solutions.office` herangezogen werden.

@@ -52,12 +52,12 @@
  *  x.add(y)     | DataPage    DataTable   DataTableRow    DataValue
  *  -------------+--------------------------------------------------------------
  *  DataPage     | NEIN        JA          NEIN            JA
- *  DataTable    | NEIN        NEIN        JA              JA
- *  DataTableRow | NEIN        JA          NEIN            JA*
+ *  DataTable    | NEIN        NEIN        JA              JA*
+ *  DataTableRow | NEIN        JA          NEIN            JA
  *  DataValue    | NEIN        NEIN        NEIN            NEIN
  * 
- *  * Einfache DataValue's in DataTableRow, werden zum Ersetzen der Kopf und
- *    der Fußzeile verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
+ *  * Einfache DataValue's in DataTable, werden zum Ersetzen der Kopf und
+ *    der Fußzeile in der Tabelle verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
  * 
  * </pre><p>Dabei ist zu beachten, dass {@link DataTable} und {@link DataValue}
  * benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede
