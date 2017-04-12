@@ -57,7 +57,7 @@ public interface DataValueMap<TReturnInstance> {
      *                  {@code Optional.empty()} sollte kein Wert gefunden
      *                  worden sein.
      */
-    public Optional<DataValue> getValueByKey(String keyName);
+    public Optional<DataValue> getValueByKey(CharSequence keyName);
     
     /**
      * Gibt alle auf dieser Ebene eingetragenen Wertpaare zurück.

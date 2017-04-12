@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * Intern - Basisimplementierung zum Speichern und Abfragen von
@@ -53,14 +54,27 @@ abstract class AbstractDataSet implements Serializable {
         }
     }
     
-    protected Optional<DataValue> getValueByKey(String keyName) {
+    final String safeToString(@Nullable CharSequence charSeq, String varName) {
+        if (null == charSeq) {
+            throw new NullPointerException(varName);
+        }
+        
+        final String strValue = charSeq.toString();
+        if (null == strValue) {
+            throw new NullPointerException(varName + ".toString()");
+        }
+        
+        return strValue;
+    }
+    
+    protected Optional<DataValue> getValueByKey(CharSequence keyName) {
         Objects.requireNonNull(keyName, "keyName");
         
         if (null == values) {
             return Optional.empty();
         }
         
-        final String pKeyName = keyName.trim().toUpperCase();
+        final String pKeyName = safeToString(keyName, "keyName").trim().toUpperCase();
         
         if (pKeyName.isEmpty() || pKeyName.length() < 2) {
             return Optional.empty();
@@ -158,14 +172,14 @@ abstract class AbstractDataSet implements Serializable {
         return this;
     }
     
-    protected Optional<DataTable> getTableByName(String tableName) {
+    protected Optional<DataTable> getTableByName(CharSequence tableName) {
         Objects.requireNonNull(tableName, "tableName");
         
         if (null == tables) {
             return Optional.empty();
         }
         
-        final String pTableName = tableName.trim().toUpperCase();
+        final String pTableName = safeToString(tableName, "tableName").trim().toUpperCase();
         
         for (DataTable singleTable : tables) {
             if (singleTable.getTableName().equals(pTableName)) {

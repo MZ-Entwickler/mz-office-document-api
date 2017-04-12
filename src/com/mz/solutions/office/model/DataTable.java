@@ -55,10 +55,10 @@ public final class DataTable extends AbstractDataSet
      *                      Kleinschreibung; muss aus mindestens 2 Zeichen
      *                      bestehen.
      */
-    public DataTable(String tableName) {
+    public DataTable(CharSequence tableName) {
         Objects.requireNonNull(tableName, "tableName");
         
-        final String pTableName = tableName.trim().toUpperCase();
+        final String pTableName = safeToString(tableName, "tableName").trim().toUpperCase();
         
         if (pTableName.isEmpty() || pTableName.length() < 2) {
             throw new IllegalArgumentException(formatMessage(TAB_NAME_TOO_SHORT));
@@ -130,7 +130,7 @@ public final class DataTable extends AbstractDataSet
      * {@inheritDoc}
      */
     @Override
-    public Optional<DataValue> getValueByKey(String keyName) {
+    public Optional<DataValue> getValueByKey(CharSequence keyName) {
         return super.getValueByKey(keyName);
     }
     
