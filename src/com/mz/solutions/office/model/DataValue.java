@@ -112,11 +112,11 @@ public final class DataValue implements Serializable, CharSequence {
      * @param value     Wert des Platzhalters; bei {@code null} wird von einer
      *                  leeren Zeichenkette ausgegangen
      */
-    public DataValue(CharSequence keyName, CharSequence value) {
+    public DataValue(CharSequence keyName, @Nullable CharSequence value) {
         this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = defaultOptions;
-        this.value = prepareValueByOptions(safeToString(value, "value"));
+        this.value = prepareValueByOptions(unsafeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -140,13 +140,13 @@ public final class DataValue implements Serializable, CharSequence {
      * @param valueOptions  Angabe von Optionen die auf den Wert angewendetet
      *                      werden sollen beim Ersetzungsvorgang
      */
-    public DataValue(CharSequence keyName, CharSequence value,
+    public DataValue(CharSequence keyName, @Nullable CharSequence value,
             ValueOptions ... valueOptions) {
         
         this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = prepareValueOptions(valueOptions);
-        this.value = prepareValueByOptions(safeToString(value, "value"));
+        this.value = prepareValueByOptions(unsafeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -182,6 +182,19 @@ public final class DataValue implements Serializable, CharSequence {
         final String strValue = charSeq.toString();
         if (null == strValue) {
             throw new NullPointerException(varName + ".toString()");
+        }
+        
+        return strValue;
+    }
+    
+    private String unsafeToString(@Nullable CharSequence charSeq, String varName) {
+        if (null == charSeq) {
+            return "";
+        }
+        
+        final String strValue = charSeq.toString();
+        if (null == strValue) {
+            return "";
         }
         
         return strValue;
