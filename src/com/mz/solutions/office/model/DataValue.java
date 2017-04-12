@@ -113,10 +113,10 @@ public final class DataValue implements Serializable, CharSequence {
      *                  leeren Zeichenkette ausgegangen
      */
     public DataValue(CharSequence keyName, CharSequence value) {
-        this.keyName = prepareKeyName(seqToString(keyName, "keyName"));
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = defaultOptions;
-        this.value = prepareValueByOptions(seqToString(value, "value"));
+        this.value = prepareValueByOptions(safeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -143,10 +143,10 @@ public final class DataValue implements Serializable, CharSequence {
     public DataValue(CharSequence keyName, CharSequence value,
             ValueOptions ... valueOptions) {
         
-        this.keyName = prepareKeyName(seqToString(keyName, "keyName"));
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = prepareValueOptions(valueOptions);
-        this.value = prepareValueByOptions(seqToString(value, "value"));
+        this.value = prepareValueByOptions(safeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -167,16 +167,24 @@ public final class DataValue implements Serializable, CharSequence {
      */
     
     public DataValue(CharSequence keyName, ExtendedValue extValue) {
-        this.keyName = prepareKeyName(seqToString(keyName, "keyName"));
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         this.options = defaultOptions;
         
         this.extValue = Objects.requireNonNull(extValue, "extValue");
         this.value = prepareValueByOptions(extValue.altString());
     }
     
-    private String seqToString(CharSequence charSeq, String name) {
-        Objects.requireNonNull(charSeq, name);
-        return Objects.requireNonNull(charSeq.toString(), () -> name + ".toString()");
+    private String safeToString(@Nullable CharSequence charSeq, String varName) {
+        if (null == charSeq) {
+            throw new NullPointerException(varName);
+        }
+        
+        final String strValue = charSeq.toString();
+        if (null == strValue) {
+            throw new NullPointerException(varName + ".toString()");
+        }
+        
+        return strValue;
     }
     
     private String prepareKeyName(String keyName) {
