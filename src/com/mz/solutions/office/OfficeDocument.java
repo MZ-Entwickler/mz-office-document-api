@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Oberklasse für Dokumente mit Platzhaltern die mit einem Daten-Modell
@@ -51,6 +52,7 @@ import javax.annotation.OverridingMethodsMustInvokeSuper;
  * 
  * @author  Riebe, Moritz   (moritz.riebe@mz-solutions.de)
  */
+@NotThreadSafe
 public abstract class OfficeDocument {
     
     OfficeDocument() { }
