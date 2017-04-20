@@ -21,6 +21,8 @@
  */
 package com.mz.solutions.office.model.images;
 
+import java.nio.file.Path;
+
 /**
  * Bild dessen Quelle extern auf dem/einem lokalen Datenträger ist und welches, soweit möglich und
  * vom Format unterstützt, nicht in das Dokument fest eingebunden werden soll, sondern von der
@@ -29,5 +31,15 @@ package com.mz.solutions.office.model.images;
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public interface LocalImageResource extends ImageResource {
+    
+    /**
+     * Rückgabe des Ortes der lokalen Bild-Resource.
+     * 
+     * <p>Wird von der Office-Implementierung keine lokale Resource unterstützt, wird konventionell
+     * weiterhiin {@link #loadImageData()} aufgerufen, welches ggf. die Bild-Datei lädt.</p>
+     * 
+     * @return  Pfad zur Bild-Resource
+     */
+    public Path getLocalResource();
     
 }

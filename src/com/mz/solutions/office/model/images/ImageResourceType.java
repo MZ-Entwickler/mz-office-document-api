@@ -21,26 +21,35 @@
  */
 package com.mz.solutions.office.model.images;
 
-import java.net.URL;
-
 /**
- * Bild dessen Quelle eine URL ist und, soweit möglich und vom Format unterstützt, nicht direkt ins
- * Dokument eingebunden werden soll, sondern von der URL beim Öffnen des Dokumentes bezogen
- * werden soll.
- * 
+ *
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
-public interface ExternalImageResource extends ImageResource{
+public interface ImageResourceType {
     
     /**
-     * Gibt die URL zurück an der die Bild-Resource gefunden/geladen werden kann.
+     * Rückgabe einer - optionalen - Beschreibung des Dateiformates.
      * 
-     * <p>Unterstützt die Office-Implementierung externe Resourcen, wird diese Methode aufgerufen
-     * um die Quelle zu ermitteln. Bei fehlender Unterstützung wird nur {@link #loadImageData()}
-     * aufgerufen, welches die Bild-Resource lädt, und normal im Dokument eingebettet.</p>
-     * 
-     * @return  URL der Bild-Resource, nie {@code null}
+     * @return  z.B. {@code 'Windows Bitmap'}.
      */
-    public URL getResourceURL();
+    public String getFileTypeName();
+    
+    /**
+     * Rückgabe des Mime-types.
+     * 
+     * @return  z.B. {@code 'image/bmp', 'image/jped'}.
+     */
+    public String getMimeType();
+    
+    /**
+     * Rückgabe der zutreffenden Datei-Namens-Erweiterungen ohne Punkt und ohne Sternchen.
+     * 
+     * <p>Die erste Namens-Erweiterung in der Rückgabe ist die Standarderweiterung. Wird z.B. ein
+     * Bild mit {@code 'jpe'} übergeben, so kann dieses ggf. umbenannt werden nach {@code 'jpg'}
+     * um der Office-Implementierung zu entsprechen.</p>
+     * 
+     * @return  z.B. {@code ['jpg', 'jpeg', 'jpe', 'jfif']}.
+     */
+    public String[] getFileNameExtensions();
     
 }
