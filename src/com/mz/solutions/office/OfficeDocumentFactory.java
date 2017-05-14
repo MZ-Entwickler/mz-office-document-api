@@ -178,6 +178,7 @@ public abstract class OfficeDocumentFactory {
         setProperty(OfficeProperty.ERR_ON_MISSING_VAL, Boolean.TRUE);
         setProperty(OfficeProperty.ERR_ON_VER_MISMATCH, Boolean.FALSE);
         setProperty(OfficeProperty.ERR_ON_NO_DATA, Boolean.TRUE);
+        setProperty(OfficeProperty.IMG_LOAD_AND_EMBED_EXTERNAL, Boolean.TRUE);
     }
     
     /**

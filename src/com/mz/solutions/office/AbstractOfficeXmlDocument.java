@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -51,6 +52,7 @@ import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.IMPL_N
 import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -230,6 +232,20 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return Boolean.FALSE.equals(errOnNoData);
     }
     
+    /**
+     * Überprüft ob Bild-Resourcen von externen Quellen geladen und direkt ins Dokument eingefügt
+     * werden sollen.
+     * 
+     * @return      {@code true}, bedeutet Bild-Resource laden (in RAM) und direkt in das Dokument
+     *              schreiben (einbetten) ohne die externe Quelle weiterzureichen.
+     */
+    protected boolean loadAndEmbedExternalImages() {
+        final Boolean imgLoadAndEmbed = myOfficeFactory.getProperty(
+                OfficeProperty.IMG_LOAD_AND_EMBED_EXTERNAL);
+        
+        return Boolean.TRUE.equals(imgLoadAndEmbed);
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     // UMGANG MIT INTERCEPTOR-VALUES (CALLBACK MECHANISMUS)
     ////////////////////////////////////////////////////////////////////////////
@@ -259,6 +275,23 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
         
         return null;
+    }
+    
+    protected Optional<Element> elementByTagName(String elementName, Node elementNode) {
+        if (elementNode instanceof Element == false) {
+            throw new IllegalStateException("internal error anyNode != type Element");
+        }
+        
+        final NodeList nodeList = ((Element) elementNode).getElementsByTagName(elementName);
+        
+        for (int nodeIndex = 0; nodeIndex < nodeList.getLength(); nodeIndex++) {
+            final Node anyNode = nodeList.item(nodeIndex);
+            
+            if (anyNode instanceof Element) {
+                return Optional.of((Element) anyNode);
+            }
+        }
+        return Optional.empty();
     }
     
     protected String getAttribute(Node elementNode, String attributeName) {

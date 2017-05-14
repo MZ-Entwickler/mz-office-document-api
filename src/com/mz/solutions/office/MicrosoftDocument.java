@@ -35,6 +35,11 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.images.ExternalImageResource;
+import com.mz.solutions.office.model.images.ImageResource;
+import com.mz.solutions.office.model.images.ImageResourceType;
+import com.mz.solutions.office.model.images.ImageValue;
+import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -50,12 +55,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import mz.solutions.office.resources.MicrosoftDocumentKeys;
 import static mz.solutions.office.resources.MicrosoftDocumentKeys.UNKNOWN_FORMATTING_CHAR;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -83,6 +90,9 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     private final Document sourceRelationships;
     private final Document sourceContentTypes;
+    
+    /** Zählt die Anzahl der eingefügten Bilder; muss vor Ersetzungsvorgang zurückgesetzt werden. */
+    private volatile int imageCounter = 0;
 
     public MicrosoftDocument(OfficeDocumentFactory factory, Path document) {
         super(factory, document, ZIP_DOC_DOCUMENT, ZIP_DOC_STYLES);
@@ -130,6 +140,19 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         
         return Boolean.TRUE.equals(doInsertPageBreaks);
     }
+    
+    /**
+     * Prüft die Einstellung ob ein Drawing-Element einem VShape Element gegenüber
+     * bevorzugt werden soll.
+     * 
+     * @return  {@code true}, dann nutz {@code w:drawing} soweit wie möglich.
+     */
+    private boolean useDrawingElementOverVShape() {
+        final Boolean drawingOverVShape = myOfficeFactory.getProperty(
+                MicrosoftProperty.USE_DRAWING_OVER_VML);
+        
+        return Boolean.TRUE.equals(drawingOverVShape);
+    }
 
     @Override
     protected ZIPDocumentFile createAndFillDocument(
@@ -145,6 +168,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     private void fillDocuments(
             final Iterator<DataPage> dataPages,
             final ZIPDocumentFile outputDocument) {
+        
+        this.imageCounter = 16_000;
         
         final Document newContent = (Document) sourceContent.cloneNode(true);
         final Document newStyles = (Document) sourceStyles.cloneNode(true);
@@ -385,6 +410,20 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     }
     
     private void replaceFields(Node rootNode, DataValueMap values) {
+        // Wichtig: erst die Bilder ersetzen! Ansonsten werden Textplatzhalter ggf. mit einem Bild
+        //          ersetz, und nachfolgenden wird wieder versucht die eben eingesetzt Bilder dann
+        //          anhand deren Eigenschaften erneut zu ersetzen (könnte in einer Endlosschleife
+        //          ungünstig enden)
+        
+        for (Node wDrawingNode : walkDrawingButNoTables(rootNode)) {
+            replaceDrawing(wDrawingNode, values);
+        }
+        
+        for (Node wPictNode : walkPictureButNoTables(rootNode)) {
+            replacePicture(wPictNode, values);
+        }
+        
+        // Feld-Befehle (Textplatzhalter)
         for (Node instrTextNode : walkInstrTextsButNoTables(rootNode)) {
             replaceField(instrTextNode, values);
         }
@@ -472,6 +511,11 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
                 subReplaceFieldWithAltChunk(instrTextNode, extValue);
                 return;
             }
+            
+            if (null != extValue && extValue instanceof ImageValue) {
+                subReplaceFieldWithImage(instrTextNode, extValue);
+                return;
+            }
         }
         
         // w:instrText ersetzen durch w:t oder längerer Formatierungskette
@@ -486,6 +530,10 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         // w:instrText tauschen mit formattierten Nodes
         wordRun.removeChild(instrTextNode);
         
+        removeEnclosingFieldChars(wordRun);
+    }
+    
+    private void removeEnclosingFieldChars(Node wordRun) {
         // umgebende w:fldChar's entfernen
         // Außerhalb der w:r Tags (in denen w:instrText war), gibt es einen
         // (meinst) w:p Tag -> dieser enthält die w:fldChar's
@@ -667,6 +715,636 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         }
     }
     
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // HANDLING VON BILDERN IN WORD-DOKUMENTEN
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    private void subReplaceFieldWithImage(Node instrTextNode, ExtendedValue extValue) {
+        final ImageValue imageValue = (ImageValue) extValue;
+        
+        final Object[] registrationResult = registerImageResource(imageValue);
+        final String imgRelId = (String) registrationResult[0];
+        final boolean usedResourceKeepsExternal = (boolean) registrationResult[1];
+        
+        final Document document = instrTextNode.getOwnerDocument();
+        final Element drawingOrPictureElement;
+        
+        if (useDrawingElementOverVShape()) {
+            drawingOrPictureElement = createDrawingElement(document);
+            
+            setupDrawingElement(
+                    drawingOrPictureElement, imageValue,
+                    imgRelId, usedResourceKeepsExternal);
+        } else {
+            drawingOrPictureElement = createPictureElement(document);
+            setupPictureElement(
+                    drawingOrPictureElement, imageValue,
+                    imgRelId, usedResourceKeepsExternal);
+        }
+        
+        final Node wordRun = instrTextNode.getParentNode();
+        wordRun.replaceChild(drawingOrPictureElement, instrTextNode);
+        
+        // noch die w:fldChar's finden und entfernen (ja die sind immernoch da -.-)
+        removeEnclosingFieldChars(wordRun);
+    }
+    
+    private void replaceDrawing(Node wDrawingNode, DataValueMap values) {
+        // Grundvoraussetzungen damit ein w:drawing Element auch ersetzt werden kann:
+        // a) [w:docPr, a:graphic, a:graphicData, pic:pic, pic:blip] müssen vorhanden sein
+        final Optional<Element> opWpDocPr = elementByTagName("wp:docPr", wDrawingNode);
+        final Optional<Element> opAGrapic = elementByTagName("a:graphic", wDrawingNode);
+        final Optional<Element> opAGraphicData = elementByTagName("a:graphicData", wDrawingNode);
+        final Optional<Element> opPicPic = elementByTagName("pic:pic", wDrawingNode);
+        final Optional<Element> opABlip = elementByTagName("a:blip", wDrawingNode);
+        
+        final boolean neededElementsExist = opWpDocPr.isPresent() && opAGrapic.isPresent()
+                && opAGraphicData.isPresent() && opPicPic.isPresent() && opABlip.isPresent();
+        
+        if (neededElementsExist == false) {
+            return;
+        }
+        
+        // b) in w:docPr muss im TITLE der Platzhalter-Name stehen
+        final Element wpDocPr = opWpDocPr.get();
+        final String keyName = wpDocPr.getAttribute("title");
+        
+        // Attribut wp:docPr[title] entfernen, da dieser sonst nicht später überschrieben wird
+        wpDocPr.removeAttribute("title");
+        
+        final ImageValue imageValue = getImageValueByKeyName(keyName, values).orElse(null);
+        if (null == imageValue) {
+            return;
+        }
+        
+        final Object[] registrationResult = registerImageResource(imageValue);
+        final String imgRelId = (String) registrationResult[0];
+        final boolean usedResourceKeepsExternal = (boolean) registrationResult[1];
+        
+        setupDrawingElement((Element) wDrawingNode, imageValue, imgRelId, usedResourceKeepsExternal);
+    }
+    
+    private void replacePicture(Node wPictNode, DataValueMap values) {
+        // Erstmal schauen ob alles notwendigen Elemente vorhanden sind!
+        // [v:shape, v:imagedata]
+        final Element vShape = elementByTagName("v:shape", wPictNode).orElse(null);
+        final Element vImagedata = elementByTagName("v:imagedata", wPictNode).orElse(null);
+        
+        if (null == vShape || null == vImagedata) {
+            return;
+        }
+        
+        // Dann schauen ob irgendwo ein Platzhalter vergeben wurde
+        final String keyName = vShape.getAttribute("alt");
+        final ImageValue imageValue = getImageValueByKeyName(keyName, values).orElse(null);
+        
+        if (null == imageValue) {
+            return;
+        }
+        
+        final Object[] registrationResult = registerImageResource(imageValue);
+        final String imgRelId = (String) registrationResult[0];
+        final boolean usedResourceKeepsExternal = (boolean) registrationResult[1];
+        
+        setupPictureElement((Element) wPictNode, imageValue, imgRelId, usedResourceKeepsExternal);
+    }
+    
+    private Optional<ImageValue> getImageValueByKeyName(String keyName, DataValueMap values) {
+        if (null == keyName || keyName.isEmpty() || keyName.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        
+        // c) zum Platzhalter muss es einen Wert geben der im Endergebnis einem ImageValue entspr.
+        final Optional<DataValue> firstValue = values.getValueByKey(keyName);
+        if (firstValue.isPresent() == false) {
+            return Optional.empty();
+        }
+        
+        interceptionContext.init(keyName, values);
+        final DataValue dataValue = handleInterception(firstValue.get(), interceptionContext);
+        if (dataValue.isExtendedValue() == false) {
+            return Optional.empty();
+        }
+        
+        final ExtendedValue extendedValue = dataValue.extendedValue();
+        if (extendedValue instanceof ImageValue == false) {
+            return Optional.empty();
+        }
+        
+        final ImageValue imageValue = (ImageValue) extendedValue;
+        
+        return Optional.of(imageValue);
+    }
+    
+    /**
+     * Registriert anhand des übergebenen {@code imageValue} das Bild sowie die Resource in die
+     * notwendigen Dateien und ggf bettet die Bild-Resource direkt ein.
+     * 
+     * @param imageValue    Im Container zu registrierende und ggf einzubettetes Bild.
+     * @return              {@code Object[length 2]}, mit zwei Werten:
+     *                      {@code Object[index 0] = String = imageRelationshipId},
+     *                      {@code Object[index 1] = boolean = usedResourceKeepsExternal}.
+     */
+    private Object[] registerImageResource(ImageValue imageValue) {
+        final Object[] resultArray = new Object[] {
+            "",         // Image-Relationship-Id
+            false       // true -> keeps external, false -> is embedded
+        };
+        
+        final ImageResource imageResource = imageValue.getImageResource();
+        final ImageResourceType imageType = imageResource.getImageFormatType();
+        
+        final String imgRelId = "rImgId" + UUID.randomUUID().toString().replace("-", "");
+        
+        final boolean isExternalResource = imageResource instanceof LocalImageResource
+                || imageResource instanceof ExternalImageResource;
+        
+        final boolean usedResourceKeepsExternal;
+        
+        if (isExternalResource && loadAndEmbedExternalImages() == false) {
+            // Bild-Resource ist extern (Datei || URL) und soll auch nicht geladen werden, sondern
+            // im Dokument als externe Resource weiter gereicht werden.
+            final String externalTarget;
+            if (imageResource instanceof ExternalImageResource) {
+                externalTarget = ((ExternalImageResource) imageResource).getResourceURL().toString();
+            } else {
+                externalTarget = ((LocalImageResource) imageResource).getLocalResource()
+                        .toAbsolutePath().toString();
+            }
+            
+            registerRelIdExternalImage(this.extAltChunk.relationshipDocument,
+                    externalTarget, imgRelId);
+        
+            registerContentType(this.extAltChunk.contentTypesDocument,
+                    imageType.getMimeType(), imageType.getFileNameExtensions()[0]);
+            
+            usedResourceKeepsExternal = true;
+        } else {
+            final String mediaPath = "media/" + imgRelId + "." + imageType.getFileNameExtensions()[0];
+            
+            extAltChunk.zipFile.createNewFileInZip("word/" + mediaPath);
+            extAltChunk.zipFile.overwrite("word/" + mediaPath, imageResource.loadImageData());
+            
+            registerRelIdEmbeddedImage(this.extAltChunk.relationshipDocument, mediaPath, imgRelId);
+            registerContentType(this.extAltChunk.contentTypesDocument,
+                    imageType.getMimeType(), imageType.getFileNameExtensions()[0]);
+            
+            usedResourceKeepsExternal = false;
+        }
+        
+        resultArray[0] = imgRelId;
+        resultArray[1] = usedResourceKeepsExternal;
+        
+        return resultArray;
+    }
+    
+    private void setupDrawingElement(
+            Element wDrawingElement, ImageValue imageValue, String imgRelId,
+            boolean usedResourceKeepsExternal)
+    {
+        if (usedResourceKeepsExternal) {
+            replaceDrawingRelId(wDrawingElement, imgRelId, true  /* use r:link  */);
+        } else {
+            replaceDrawingRelId(wDrawingElement, imgRelId, false /* use r:embed */);
+        }
+
+        overwriteDrawingElementIds(wDrawingElement);
+        applyNonVisiblePropertiesToDrawingElement(wDrawingElement, imageValue);
+        applyVisibleTextPropertiesToDrawingElement(wDrawingElement, imageValue);
+    }
+    
+    private void setupPictureElement(
+            Element wPictureElement, ImageValue imageValue, String imgRelId,
+            boolean usedResourceKeepsExternal)
+    {
+        replacePictureRelId(wPictureElement, imgRelId);
+        overwritePictureElementIds(wPictureElement);
+        applyNonVisiblePropertiesToPictureElement(wPictureElement, imageValue);
+        applyVisibleTextPropertiesToPictureElement(wPictureElement, imageValue);
+    }
+    
+    private Element createDrawingElement(Document document) {
+        final String XML_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        final String XML_NS_PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+        final String XML_NS_A14 = "http://schemas.microsoft.com/office/drawing/2010/main";
+        
+        // w:drawing
+        final Element wDrawing = document.createElement("w:drawing");
+        
+        // w:drawing > wp:inline
+        final Element wpInline = (Element) wDrawing.appendChild(document.createElement("wp:inline"));
+        wpInline.setAttribute("distR", "0");
+        wpInline.setAttribute("distL", "0");
+        wpInline.setAttribute("distB", "0");
+        wpInline.setAttribute("distT", "0");
+        
+        final Element wpExtend = (Element) wpInline.appendChild(document.createElement("wp:extent"));
+        wpExtend.setAttribute("cy", "357751");
+        wpExtend.setAttribute("cx", "573151");
+        
+        final Element wpEffectExtent = (Element) wpInline.appendChild(document.createElement("wp:effectExtent"));
+        wpEffectExtent.setAttribute("r", "2540");
+        wpEffectExtent.setAttribute("b", "4445");
+        wpEffectExtent.setAttribute("t", "0");
+        wpEffectExtent.setAttribute("l", "0");
+        
+        final Element wpDocPr = (Element) wpInline.appendChild(document.createElement("wp:docPr"));
+        //wpDocPr.setAttribute("title", "TITLE");
+        //wpDocPr.setAttribute("descr", "DESCRIPTION");
+        wpDocPr.setAttribute("name", "Picture 1");      // siehe overwriteDrawingElementIds
+        wpDocPr.setAttribute("id", "0");                // siehe overwriteDrawingElementIds
+        
+        final Element wpcNvGraphicFramePr = (Element) wpInline.appendChild(document.createElement("wp:cNvGraphicFramePr"));
+        final Element aGraphic = (Element) wpInline.appendChild(document.createElement("a:graphic"));
+        aGraphic.setAttribute("xmlns:a", XML_NS_A);
+        
+        // w:drawing > wp:inline > wp:cNvGraphicsFramePt
+        final Element aGraphicFrameLocks = (Element) wpcNvGraphicFramePr.appendChild(
+                document.createElement("a:graphicFrameLocks"));
+        aGraphicFrameLocks.setAttribute("noChangeAspect", "0"); // REMOVED
+        aGraphicFrameLocks.setAttribute("xmlns:a", XML_NS_A);
+        
+        // w:drawing > wp:inline > a:graphic
+        final Element aGraphicData = (Element) aGraphic.appendChild(document.createElement("a:graphicData"));
+        aGraphicData.setAttribute("uri", XML_NS_PIC);
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData
+        final Element picPic = (Element) aGraphicData.appendChild(document.createElement("pic:pic"));
+        picPic.setAttribute("xmlns:pic", XML_NS_PIC);
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic
+        final Element picNvPicPr = (Element) picPic.appendChild(document.createElement("pic:nvPicPr"));
+        final Element picBlipFill = (Element) picPic.appendChild(document.createElement("pic:blipFill"));
+        final Element picSpPr = (Element) picPic.appendChild(document.createElement("pic:spPr"));
+        picSpPr.setAttribute("bwMode", "auto");
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:nvPicPr
+        final Element picCNvPr = (Element) picNvPicPr.appendChild(document.createElement("pic:cNvPr"));
+        //picCNvPr.setAttribute("descr", "DESCRIPTION");
+        picCNvPr.setAttribute("name", "Picture 1");     // siehe overwriteDrawingElementIds
+        picCNvPr.setAttribute("id", "0");               // siehe overwriteDrawingElementIds
+        //picCNvPr.setAttribute("title", "TITLE2");
+        
+        final Element picCNvPicPr = (Element) picNvPicPr.appendChild(document.createElement("pic:cNvPicPr"));
+        final Element apicLocks = (Element) picCNvPicPr.appendChild(document.createElement("a:picLocks"));
+        apicLocks.setAttribute("noChangeAspect", "0"); // REMOVED
+        apicLocks.setAttribute("noChangeArrowheads", "0"); // REMOVED
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill
+        final Element aBlip = (Element) picBlipFill.appendChild(document.createElement("a:blip"));
+        aBlip.setAttribute("r:embed", "##ERROR##");
+        //aBlip.setAttribute("cstate", "print"); // NEW
+        
+        final Element aSrcRect = (Element) picBlipFill.appendChild(document.createElement("a:srcRect"));
+        final Element aStretch = (Element) picBlipFill.appendChild(document.createElement("a:stretch"));
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill
+        final Element aExtLst = (Element) aBlip.appendChild(document.createElement("a:extLst"));
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill > a:extLst
+        final Element aExt = (Element) aExtLst.appendChild(document.createElement("a:ext"));
+        aExt.setAttribute("uri", "{28A0092B-C50C-407E-A947-70E740481C1C}");
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill > a:extLst > a14:useLocalDpi
+        final Element a14UseLocalDpi = (Element) aExt.appendChild(document.createElement("a14:useLocalDpi"));
+        a14UseLocalDpi.setAttribute("val", "0");
+        a14UseLocalDpi.setAttribute("xmlns:a14", XML_NS_A14);
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill > a:stretch
+        final Element aFillRect = (Element) aStretch.appendChild(document.createElement("a:fillRect"));
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:spPr
+        final Element aXfrm = (Element) picSpPr.appendChild(document.createElement("a:xfrm"));
+        final Element aPrstGeom = (Element) picSpPr.appendChild(document.createElement("a:prstGeom"));
+        aPrstGeom.setAttribute("prst", "rect");
+        
+        final Element aNoFill = (Element) picSpPr.appendChild(document.createElement("a:noFill"));
+        final Element aLn = (Element) picSpPr.appendChild(document.createElement("a:ln"));
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:spPr > a:xfrm
+        final Element aOff = (Element) aXfrm.appendChild(document.createElement("a:off"));
+        aOff.setAttribute("y", "0");
+        aOff.setAttribute("x", "0");
+        
+        final Element aExt2 = (Element) aXfrm.appendChild(document.createElement("a:ext")); // !! 2 !!
+        aExt2.setAttribute("cy", "357751");
+        aExt2.setAttribute("cx", "573151");
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:spPr > a:prstGeom
+        final Element aAvLst = (Element) aPrstGeom.appendChild(document.createElement("a:avLst"));
+        
+        // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:spPr > a:ln
+        final Element aNoFill2 = (Element) aLn.appendChild(document.createElement("a:noFill"));
+        
+        return wDrawing;
+    }
+    
+    private void replaceDrawingRelId(Element drawingElement, String useRelId, boolean extLink) {
+        final String ATTR_R_EMBED = "r:embed";
+        final String ATTR_R_LINK = "r:link";
+        
+        final Element aBlip = elementByTagName("a:blip", drawingElement).orElse(null);
+        if (null == aBlip) return;
+        
+        if (extLink) {
+            aBlip.removeAttribute(ATTR_R_EMBED);
+            aBlip.setAttribute(ATTR_R_LINK, useRelId);
+        } else {
+            aBlip.removeAttribute(ATTR_R_LINK);
+            aBlip.setAttribute(ATTR_R_EMBED, useRelId);
+        }
+    }
+    
+    private void overwriteDrawingElementIds(Element drawingElement) {
+        final String myPictureIdMinusOne = Integer.toString(imageCounter);
+        final String myPictureId = Integer.toString(++imageCounter);
+        
+        final Optional<Element> wpDocPr = elementByTagName("wp:docPr", drawingElement);
+        if (wpDocPr.isPresent()) {
+            wpDocPr.get().setAttribute("name", "Picture " + myPictureId);
+            wpDocPr.get().setAttribute("id", myPictureId);
+        }
+        
+        final Optional<Element> picCNvPr = elementByTagName("pic:cNvPr", drawingElement);
+        if (picCNvPr.isPresent()) {
+            picCNvPr.get().setAttribute("name", "Picture " + myPictureId);
+            picCNvPr.get().setAttribute("id", myPictureIdMinusOne);
+        }
+    }
+    
+    private void applyVisibleTextPropertiesToDrawingElement(Element wDrawing, ImageValue imgValue) {
+        final Optional<Element> opWpDocPr = elementByTagName("wp:docPr", wDrawing);
+        if (opWpDocPr.isPresent() == false) {
+            return; // Dann lassen wir das vorerst lieber
+        }
+        
+        final Element wpDocPr = opWpDocPr.get();
+        
+        final String prTitle = imgValue.getTitle().orElse(wpDocPr.getAttribute("title"));
+        final String prDescr = imgValue.getDescription().orElse(wpDocPr.getAttribute("desc"));
+        
+        if (null == prTitle || "".equals(prTitle)) {
+            wpDocPr.removeAttribute("title");
+        } else {
+            wpDocPr.setAttribute("title", prTitle);
+        }
+        
+        if (null == prDescr || "".equals(prDescr)) {
+            wpDocPr.removeAttribute("descr");
+        } else {
+            wpDocPr.setAttribute("descr", prDescr);
+        }
+    }
+    
+    private void applyNonVisiblePropertiesToDrawingElement(Element wDrawing, ImageValue imgValue) {
+        // Vorher bitte #overwriteDrawingElementIds verwendet und aufrufen
+        
+        // Überschreibt die nicht-visuellen (also in Word nicht angezeigten) Eigenschaften oder
+        // wenn bisher keine dort standen, _versucht_ diese dort einzufügen.
+        // Nicht vorhandene Eigenschaften, also jene die in imgValue nie gesetzt wurden, werden
+        // nicht überschrieben und auch nicht angefasst, default bleibt erhalten
+        
+        final Optional<Element> opPicCNvPr = elementByTagName("pic:cNvPr", wDrawing);
+        final Element picCNvPr;
+        
+        if (opPicCNvPr.isPresent()) {
+            picCNvPr = opPicCNvPr.get();
+        } else {
+            // versuchen, anzulegen und einzuhängen, aber nur wenn pic:nvPicPr vorhanden ist
+            final Optional<Element> opPicNvPicPr = elementByTagName("pic:nvPicPr", wDrawing);
+            if (opPicNvPicPr.isPresent()) {
+                picCNvPr = wDrawing.getOwnerDocument().createElement("pic:cNvPr");
+                if (opPicCNvPr.get().getChildNodes().getLength() > 0) {
+                    opPicCNvPr.get().insertBefore(picCNvPr, opPicCNvPr.get().getFirstChild());
+                } else {
+                    opPicCNvPr.get().appendChild(picCNvPr);
+                }
+            } else {
+                // das wird nix
+                return;
+            }
+        }
+        
+        final String orAttrId = picCNvPr.getAttribute("id");
+        
+        @Nullable String prId = orAttrId.isEmpty() ? Integer.toString(imageCounter - 1) : orAttrId;
+        @Nullable String prTitle = imgValue.getTitle().orElse(picCNvPr.getAttribute("title"));
+        @Nullable String prDescr = imgValue.getDescription().orElse(picCNvPr.getAttribute("descr"));
+        @Nullable String prName = picCNvPr.getAttribute("name");
+        
+        // Wenn prTitle oder prDescr NULL sind, dann versuche von Lokalen/Externen-Resourcen noch
+        // Werte ableiten zu können -> diese werden dann eingesetzt. Ansonsten werden die
+        // betreffenden Attribute schlicht entfernt.
+        final ImageResource res = imgValue.getImageResource();
+        if (    // okay, einer von beiden muss min. NULL sein und die Resource muss extern sein
+                (null == prTitle || null == prDescr || "".equals(prTitle) || "".equals(prDescr))
+                && (res instanceof LocalImageResource || res instanceof ExternalImageResource))
+        {
+            if (null == prTitle || "".equals(prTitle)) {
+                final String extName = (res instanceof LocalImageResource)
+                        ? ((LocalImageResource) res).getLocalResource().getFileName().toString()
+                        : ((ExternalImageResource) res).getResourceURL().getHost();
+                
+                prTitle = extName;
+            }
+            
+            if (null == prDescr || "".equals(prDescr)) {
+                final String extPath = (res instanceof LocalImageResource)
+                        ? ((LocalImageResource) res).getLocalResource().toString()
+                        : ((ExternalImageResource) res).getResourceURL().toString();
+                
+                prDescr = extPath;
+            }
+            
+            if ((null != prName && prName.startsWith("Picture")) && res instanceof LocalImageResource) {
+                prName = ((LocalImageResource) res).getLocalResource().getFileName().toString();
+            }
+        }
+        
+        picCNvPr.setAttribute("id", prId);
+        
+        if (null == prTitle || "".equals(prTitle)) {
+            picCNvPr.removeAttribute("title");
+        } else {
+            picCNvPr.setAttribute("title", prTitle);
+        }
+        
+        if (null == prDescr || "".equals(prDescr)) {
+            picCNvPr.removeAttribute("descr");
+        } else {
+            picCNvPr.setAttribute("descr", prDescr);
+        }
+        
+        picCNvPr.setAttribute("name", (null == prName) ? "" : prName);
+    }
+    
+    private Element createPictureElement(Document document) {
+        final Element wPict = document.createElement("w:pict");
+        final Element vShape = (Element) wPict.appendChild(document.createElement("v:shape"));
+        vShape.setAttribute("id", "vShapeImage0");
+        vShape.setAttribute("type", "#_x0000_t75");
+        vShape.setAttribute("style", "width:auto; height:auto");
+        
+        final Element vImagedata = (Element) vShape.appendChild(document.createElement("v:imagedata"));
+        vImagedata.setAttribute("r:id", "##ERROR##");
+        
+        return wPict;
+    }
+    
+    private void replacePictureRelId(Element pictureElement, String useRelId) {
+        final Element vImageData = (Element) pictureElement.getElementsByTagName("v:imagedata").item(0);
+        vImageData.setAttribute("r:id", useRelId);
+    }
+    
+    private void overwritePictureElementIds(Element pictureElement) {
+        final Optional<Element> vShape = elementByTagName("v:shape", pictureElement);
+        if (vShape.isPresent()) {
+            vShape.get().setAttribute("id", "vShapeImage" + Integer.toString(++imageCounter));
+        }
+    }
+    
+    private void applyVisibleTextPropertiesToPictureElement(Element wPict, ImageValue imgValue) {
+        // Überschreit lediglich ein Attribut v:shape[alt]
+        final Element vShape = elementByTagName("v:shape", wPict).orElse(null);
+        if (null == vShape) return;
+        
+        final String prTitle = imgValue.getTitle().orElse("");
+        final String prDescr = imgValue.getDescription().orElse("");
+        
+        if (prTitle.isEmpty() && prDescr.isEmpty()) {
+            // Attribut 'alt' fliegt dann einfach raus
+            vShape.removeAttribute("alt");
+        } else if (prTitle.isEmpty() && prDescr.isEmpty() == false) {
+            vShape.setAttribute("alt", prDescr);
+        } else if (prTitle.isEmpty() == false && prDescr.isEmpty()) {
+            vShape.setAttribute("alt", prTitle);
+        } else if (prTitle.isEmpty() == false && prDescr.isEmpty() == false) {
+            vShape.setAttribute("alt", prTitle + "\n" + prDescr);
+        }
+    }
+    
+    private void applyNonVisiblePropertiesToPictureElement(Element wPict, ImageValue imgValue) {
+        final Element vImagedata = elementByTagName("v:imagedata", wPict).orElse(null);
+        if (null == vImagedata) return;
+        
+        // v:imagedata[o:title]
+        final String prTitle = imgValue.getTitle().orElse(null);
+        if (null == prTitle || prTitle.isEmpty()) {
+            vImagedata.removeAttribute("o:title");
+        } else {
+            vImagedata.setAttribute("o:title", prTitle);
+        }
+        
+//        // v:imagedata[o:althref]
+//        final ImageResource imgRes = imgValue.getImageResource();
+//        if (imgRes instanceof LocalImageResource || imgRes instanceof ExternalImageResource) {
+//            final String prOHref;
+//            
+//            if (imgRes instanceof LocalImageResource) {
+//                prOHref = ((LocalImageResource) imgRes).getLocalResource().toString();
+//            } else {
+//                prOHref = ((ExternalImageResource) imgRes).getResourceURL().toString();
+//            }
+//            
+//            vImagedata.setAttribute("o:althref", prOHref);
+//        } else {
+//            vImagedata.removeAttribute("o:althref");
+//        }
+    }
+    
+    private Element createRelationshipImageEmbeddedElement(Document document, String imageTarget, String rId) {
+        final String IMG_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+        
+        final Element relationship = (Element) document.createElement("Relationship");
+        relationship.setAttribute("Id", rId);
+        relationship.setAttribute("Type", IMG_TYPE);
+        relationship.setAttribute("Target", imageTarget);
+        
+        return relationship;
+    }
+    
+    private Element createRelationshipImageExternalElement(Document document, String imageTarget, String rId) {
+        final Element relElement = createRelationshipImageEmbeddedElement(document, imageTarget, rId);
+        relElement.setAttribute("TargetMode", "External");
+        return relElement;
+    }
+    
+    private void registerRelIdEmbeddedImage(Document document, String imageTarget, String rId) {
+        registerRelIdForImage0(document, imageTarget, rId, true /* ja, erstelle eingebettet */);
+    }
+    
+    private void registerRelIdExternalImage(Document document, String imageTarget, String rId) {
+        registerRelIdForImage0(document, imageTarget, rId, false /* nein, nicht eingebettet, extern */);
+    }
+    
+    private void registerRelIdForImage0(Document document, String imageTarget, String rId, boolean createEmbeddedId) {
+        // TODO: nicht einfach von Index 0 nehmen, sondern prüfen ob dort überhaupt ein Element ist!
+        final Element rootRelElement = (Element) document.getElementsByTagName("Relationships").item(0);
+        final NodeList relationshipList = rootRelElement.getChildNodes();
+        
+        for (int nodeIndex = 0; nodeIndex < relationshipList.getLength(); nodeIndex++) {
+            final Node nodeItem = relationshipList.item(nodeIndex);
+            if (nodeItem instanceof Element == false) continue;
+            
+            final Element relElement = (Element) nodeItem;
+            if (relElement.getNodeName().equals("Relationship") == false) continue;
+            
+            final String attrRId = relElement.getAttribute("Id");
+            
+            if (null != attrRId && attrRId.equals(rId)) {
+                // dann wurde diese ID bereits vormals erfolgreich registriert und muss nicht
+                // (darf nicht) doppelt eingetragen werden.
+                return;
+            }
+        }
+        
+        // Okay, ID unbekannt -> registrieren
+        final Element relImgElement = createEmbeddedId
+                ? createRelationshipImageEmbeddedElement(document, imageTarget, rId)
+                : createRelationshipImageExternalElement(document, imageTarget, rId);
+        
+        if (relationshipList.getLength() == 0) {
+            rootRelElement.appendChild(relImgElement);
+        } else {
+            rootRelElement.insertBefore(relImgElement, rootRelElement.getFirstChild());
+        }
+    }
+    
+    private Element createContentTypeElement(Document document, String mimeContentType, String extension) {
+        final Element xmlDefault = (Element) document.createElement("Default");
+        xmlDefault.setAttribute("ContentType", mimeContentType);
+        xmlDefault.setAttribute("Extension", extension);
+        return xmlDefault;
+    }
+    
+    private void registerContentType(Document document, String mimeContentType, String extension) {
+        final Element rootTypesElement = (Element) document.getElementsByTagName("Types").item(0);
+        final NodeList contentTypeList = rootTypesElement.getChildNodes();
+        
+        for (int nodeIndex = 0; nodeIndex < contentTypeList.getLength(); nodeIndex++) {
+            final Node nodeItem = contentTypeList.item(nodeIndex);
+            if (nodeItem instanceof Element == false) continue;
+            
+            final Element typeElement = (Element) nodeItem;
+            if (typeElement.getNodeName().equals("Default") == false) continue;
+            
+            final String attrContentType = typeElement.getAttribute("ContentType");
+            if (null != attrContentType && attrContentType.equals(mimeContentType)) {
+                // MIME Type ist bereits enthalten und registriert
+                return;
+            }
+        }
+        
+        // Noch nicht registriert, dann einfach hinzufügen
+        final Element newMimeType = createContentTypeElement(document, mimeContentType, extension);
+        
+        if (contentTypeList.getLength() == 0) {
+            rootTypesElement.appendChild(newMimeType);
+        } else {
+            rootTypesElement.insertBefore(newMimeType, rootTypesElement.getFirstChild());
+        }
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     // Einfache XML Routinen
     ////////////////////////////////////////////////////////////////////////////
@@ -686,6 +1364,18 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     private GenericNodeIterator walkInstrTextsButNoTables(Node rootNode) {
         return new GenericNodeIterator(rootNode, "w:instrText")
+                .noRecursionByElements("w:tbl")
+                .doSkipFirstStopElement();
+    }
+    
+    private GenericNodeIterator walkDrawingButNoTables(Node rootNode) {
+        return new GenericNodeIterator(rootNode, "w:drawing")
+                .noRecursionByElements("w:tbl")
+                .doSkipFirstStopElement();
+    }
+    
+    private GenericNodeIterator walkPictureButNoTables(Node rootNode) {
+        return new GenericNodeIterator(rootNode, "w:pict")
                 .noRecursionByElements("w:tbl")
                 .doSkipFirstStopElement();
     }

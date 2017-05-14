@@ -32,6 +32,12 @@ import java.nio.file.Path;
  */
 public interface LocalImageResource extends ImageResource {
     
+    public static LocalImageResource useLocalFile(Path imageFile, ImageResourceType formatType) {
+        return ImageResource.useLocalFile(imageFile, formatType);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     /**
      * Rückgabe des Ortes der lokalen Bild-Resource.
      * 

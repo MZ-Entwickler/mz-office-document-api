@@ -47,6 +47,7 @@ final class MicrosoftDocumentFactory extends OfficeDocumentFactory {
 
     protected MicrosoftDocumentFactory() {
         setProperty(MicrosoftProperty.INS_HARD_PAGE_BREAKS, Boolean.TRUE);
+        setProperty(MicrosoftProperty.USE_DRAWING_OVER_VML, Boolean.TRUE);
     }
 
     @Override

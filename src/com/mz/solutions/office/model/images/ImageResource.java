@@ -21,6 +21,12 @@
  */
 package com.mz.solutions.office.model.images;
 
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.util.Objects;
+
 /**
  * Eigentliches Bild mit Quelle und/oder Daten des Bildes.
  * 
@@ -28,7 +34,55 @@ package com.mz.solutions.office.model.images;
  */
 public interface ImageResource {
     
-    public Object getImageFormatType();
+    public static ImageResource loadImage(Path imageFile, ImageResourceType formatType)
+            throws UncheckedIOException
+    {
+        Objects.requireNonNull(imageFile, "imageFile");
+        Objects.requireNonNull(formatType, "formatType");
+        
+        return new StandardImageResource.EagerEmbedImgResFile(imageFile, formatType);
+    }
+    
+    public static ImageResource loadImage(InputStream imageStream, ImageResourceType formatType)
+            throws UncheckedIOException
+    {
+        Objects.requireNonNull(imageStream, "imageStream");
+        Objects.requireNonNull(formatType, "formatType");
+        
+        return new StandardImageResource.EagerEmbedImgResData(imageStream, formatType);
+    }
+    
+    public static ImageResource loadImage(byte[] imageData, ImageResourceType formatType) {
+        Objects.requireNonNull(imageData, "imageData");
+        Objects.requireNonNull(formatType, "formatType");
+        
+        return new StandardImageResource.EagerEmbedImgResData(imageData, formatType);
+    }
+    
+    public static ImageResource loadImageLazy(Path imageFile, ImageResourceType formatType) {
+        Objects.requireNonNull(imageFile, "imageFile");
+        Objects.requireNonNull(formatType, "formatType");
+        
+        return new StandardImageResource.LazyEmbedImgResFile(imageFile, formatType);
+    }
+    
+    public static LocalImageResource useLocalFile(Path imageFile, ImageResourceType imgType) {
+        Objects.requireNonNull(imageFile, "imageFile");
+        Objects.requireNonNull(imgType, "imgType");
+        
+        return new StandardImageResource.LocalImageResourceImpl(imageFile, imgType);
+    }
+    
+    public static ExternalImageResource useExternalFile(URL imageURL, ImageResourceType imgType) {
+        Objects.requireNonNull(imageURL, "imageURL");
+        Objects.requireNonNull(imgType, "imgType");
+        
+        return new StandardImageResource.ExternalImgResImpl(imageURL, imgType);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    public ImageResourceType getImageFormatType();
     
     public byte[] loadImageData();
     

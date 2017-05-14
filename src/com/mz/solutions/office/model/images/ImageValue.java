@@ -22,6 +22,9 @@
 package com.mz.solutions.office.model.images;
 
 import com.mz.solutions.office.extension.ExtendedValue;
+import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nullable;
 
 /**
  * Platzhalter-Wert {@link ExtendedValue} eines Bildes mit einer zugeordneten Resource
@@ -29,6 +32,42 @@ import com.mz.solutions.office.extension.ExtendedValue;
  * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
-public abstract class ImageValue extends ExtendedValue {
+public class ImageValue extends ExtendedValue {
+
+    private final ImageResource imgResource;
+    
+    @Nullable
+    private String title, description;
+    
+    public ImageValue(ImageResource imgResource) {
+        this.imgResource = Objects.requireNonNull(imgResource, "imgResource");
+    }
+    
+    public ImageResource getImageResource() {
+        return imgResource;
+    }
+    
+    public ImageValue setTitle(@Nullable CharSequence title) {
+        this.title = (null == title) ? null : title.toString();
+        return this;
+    }
+    
+    public ImageValue setDescription(@Nullable CharSequence description) {
+        this.description = (null == description) ? null : description.toString();
+        return this;
+    }
+    
+    public Optional<String> getTitle() {
+        return Optional.ofNullable(title);
+    }
+
+    public Optional<String> getDescription() {
+        return Optional.ofNullable(description);
+    }
+
+    @Override
+    public String altString() {
+        return getDescription().orElse(null);
+    }
     
 }

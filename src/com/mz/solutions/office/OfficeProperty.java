@@ -21,6 +21,8 @@
  */
 package com.mz.solutions.office;
 
+import com.mz.solutions.office.model.images.ImageValue;
+
 /**
  * Einstellungen der Factories die für alle Office Implementierungen existieren.
  * 
@@ -67,10 +69,26 @@ public final class OfficeProperty<TPropertyValue>
      */
     public static final OfficeProperty<Boolean> ERR_ON_NO_DATA;
     
+    /**
+     * Bestimmt das Verhalten bei Bild-Resourcen die einer externen Quelle (URL, Datei) entstammen
+     * ob diese als externe Quelle im Dokument verwiesen werden oder ob die Daten von der externen
+     * Quelle geladen und direkt ins Dokument eingebettet werden sollen.
+     * 
+     * <p>Die Voreinstellung {@code Boolean.TRUE} lädt die externe Quelle und bindet die Resource
+     * direkt ins resultierende Dokument ein. Mit {@code Boolean.FALSE} würde nur die Quellangabe,
+     * wenn unterstützt, ins Dokument eingefügt werden und vom Office-Programm beim Öffnen
+     * nachgeladen werden.</p>
+     * 
+     * <p>Dieses Verhalten kann im betreffenden {@link ImageValue} als Hinweis überschrieben und
+     * für Sonderfälle/Ausnahmen abgewandelt werden.</p>
+     */
+    public static final OfficeProperty<Boolean> IMG_LOAD_AND_EMBED_EXTERNAL;
+    
     static {
         ERR_ON_VER_MISMATCH = new OfficeProperty<>("ERR_ON_VER_MISMATCH");
         ERR_ON_MISSING_VAL = new OfficeProperty<>("ERR_ON_MISSING_VAL");
         ERR_ON_NO_DATA = new OfficeProperty<>("ERR_ON_NO_DATA");
+        IMG_LOAD_AND_EMBED_EXTERNAL = new OfficeProperty<>("IMG_LOAD_AND_EMBED_EXTERNAL");
     }
     
     ////////////////////////////////////////////////////////////////////////////

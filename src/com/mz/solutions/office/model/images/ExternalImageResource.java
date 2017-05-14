@@ -30,7 +30,13 @@ import java.net.URL;
  * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
-public interface ExternalImageResource extends ImageResource{
+public interface ExternalImageResource extends ImageResource {
+    
+    public static ExternalImageResource useExternalFile(URL imageURL, ImageResourceType imgType) {
+        return ImageResource.useExternalFile(imageURL, imgType);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     /**
      * Gibt die URL zurück an der die Bild-Resource gefunden/geladen werden kann.
