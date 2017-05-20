@@ -36,19 +36,11 @@ import com.mz.solutions.office.model.interceptor.DataValueResult;
 import com.mz.solutions.office.model.interceptor.ValueInterceptor;
 import com.mz.solutions.office.result.ResultFactory;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import static java.util.Arrays.asList;
 import java.util.List;
 import org.junit.Test;
 
-public class WordImages {
-    
-    private static final Path ROOT_IN = Paths.get("test-templates");
-    private static final Path ROOT_OUT = ROOT_IN.resolve("output");
-    
-    private static final Path IMG_1 = ROOT_IN.resolve("img_result_1.png");
-    private static final Path IMG_2 = ROOT_IN.resolve("img_result_2.png");
-    private static final Path IMG_3 = ROOT_IN.resolve("img_result_3.png");
+public class WordImages extends AbstractImageTest {
     
     private static final Path INPUT_FILE_1 = ROOT_IN.resolve("WordImagesInDocument.docx");
     private static final Path INPUT_FILE_2 = ROOT_IN.resolve("WordImagesInDocument_Tables.docx");
