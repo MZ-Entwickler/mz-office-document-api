@@ -738,8 +738,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         } else {
             drawingOrPictureElement = createPictureElement(document);
             setupPictureElement(
-                    drawingOrPictureElement, imageValue,
-                    imgRelId, usedResourceKeepsExternal);
+                    drawingOrPictureElement, imageValue, imgRelId);
         }
         
         final Node wordRun = instrTextNode.getParentNode();
@@ -806,7 +805,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         final String imgRelId = (String) registrationResult[0];
         final boolean usedResourceKeepsExternal = (boolean) registrationResult[1];
         
-        setupPictureElement((Element) wPictNode, imageValue, imgRelId, usedResourceKeepsExternal);
+        setupPictureElement((Element) wPictNode, imageValue, imgRelId);
     }
     
     private Optional<ImageValue> getImageValueByKeyName(String keyName, DataValueMap values) {
@@ -914,11 +913,11 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     }
     
     private void setupPictureElement(
-            Element wPictureElement, ImageValue imageValue, String imgRelId,
-            boolean usedResourceKeepsExternal)
+            Element wPictureElement, ImageValue imageValue, String imgRelId)
     {
         replacePictureRelId(wPictureElement, imgRelId);
         overwritePictureElementIds(wPictureElement);
+
         applyNonVisiblePropertiesToPictureElement(wPictureElement, imageValue);
         applyVisibleTextPropertiesToPictureElement(wPictureElement, imageValue);
     }
@@ -949,10 +948,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         wpEffectExtent.setAttribute("l", "0");
         
         final Element wpDocPr = (Element) wpInline.appendChild(document.createElement("wp:docPr"));
-        //wpDocPr.setAttribute("title", "TITLE");
-        //wpDocPr.setAttribute("descr", "DESCRIPTION");
-        wpDocPr.setAttribute("name", "Picture 1");      // siehe overwriteDrawingElementIds
-        wpDocPr.setAttribute("id", "0");                // siehe overwriteDrawingElementIds
+        wpDocPr.setAttribute("name", "Picture 1"); // wird ggf. überschrieben
+        wpDocPr.setAttribute("id", "0"); // ID wird später überschrieben
         
         final Element wpcNvGraphicFramePr = (Element) wpInline.appendChild(document.createElement("wp:cNvGraphicFramePr"));
         final Element aGraphic = (Element) wpInline.appendChild(document.createElement("a:graphic"));
@@ -961,7 +958,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         // w:drawing > wp:inline > wp:cNvGraphicsFramePt
         final Element aGraphicFrameLocks = (Element) wpcNvGraphicFramePr.appendChild(
                 document.createElement("a:graphicFrameLocks"));
-        aGraphicFrameLocks.setAttribute("noChangeAspect", "0"); // REMOVED
+        aGraphicFrameLocks.setAttribute("noChangeAspect", "0");
         aGraphicFrameLocks.setAttribute("xmlns:a", XML_NS_A);
         
         // w:drawing > wp:inline > a:graphic
@@ -980,20 +977,17 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         
         // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:nvPicPr
         final Element picCNvPr = (Element) picNvPicPr.appendChild(document.createElement("pic:cNvPr"));
-        //picCNvPr.setAttribute("descr", "DESCRIPTION");
-        picCNvPr.setAttribute("name", "Picture 1");     // siehe overwriteDrawingElementIds
-        picCNvPr.setAttribute("id", "0");               // siehe overwriteDrawingElementIds
-        //picCNvPr.setAttribute("title", "TITLE2");
+        picCNvPr.setAttribute("name", "Picture 1"); // wird später ggf. überschrieben
+        picCNvPr.setAttribute("id", "0"); // ID wird später überschrieben
         
         final Element picCNvPicPr = (Element) picNvPicPr.appendChild(document.createElement("pic:cNvPicPr"));
         final Element apicLocks = (Element) picCNvPicPr.appendChild(document.createElement("a:picLocks"));
-        apicLocks.setAttribute("noChangeAspect", "0"); // REMOVED
-        apicLocks.setAttribute("noChangeArrowheads", "0"); // REMOVED
+        apicLocks.setAttribute("noChangeAspect", "0");
+        apicLocks.setAttribute("noChangeArrowheads", "0");
         
         // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:blipFill
         final Element aBlip = (Element) picBlipFill.appendChild(document.createElement("a:blip"));
         aBlip.setAttribute("r:embed", "##ERROR##");
-        //aBlip.setAttribute("cstate", "print"); // NEW
         
         final Element aSrcRect = (Element) picBlipFill.appendChild(document.createElement("a:srcRect"));
         final Element aStretch = (Element) picBlipFill.appendChild(document.createElement("a:stretch"));
