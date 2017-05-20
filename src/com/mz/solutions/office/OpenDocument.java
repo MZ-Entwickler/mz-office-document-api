@@ -171,7 +171,6 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private void replaceDocumentTree(Node node, DataMap valueMap) {
-        // Normale Platzhalter ersetzen (nicht rekursiv Tabellen)
         replaceUserFieldsAndImages(node, valueMap);
         replaceTables(node, valueMap);
     }
@@ -213,9 +212,6 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         final Optional<DataTable> tableData = values.getTableByName(tableName);
         
         if (tableData.isPresent() == false) {
-            // DARF EIGENTLICH NICHT MEHR AUFTRETEN!
-            // Aufgrund der Ausnahmesituation wird hier auf
-            // eine Übersetzung verzichtet.
             throw new IllegalStateException(
                     "(Internal Error) Found unknown table: " + tableName);
         }

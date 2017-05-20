@@ -19,17 +19,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mz.solutions.mso.images;
+package com.mz.solutions.mso;
 
-import com.mz.solutions.mso.AbstractOfficeTest;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.junit.Ignore;
 
 @Ignore
-abstract class AbstractImageTest extends AbstractOfficeTest {
+public abstract class AbstractOfficeTest {
     
-    protected static final Path IMG_1 = ROOT_IN.resolve("img_result_1.png");
-    protected static final Path IMG_2 = ROOT_IN.resolve("img_result_2.png");
-    protected static final Path IMG_3 = ROOT_IN.resolve("img_result_3.png");
+    protected static final Path ROOT_IN = Paths.get("test-templates");
+    protected static final Path ROOT_OUT = ROOT_IN.resolve("output");
     
 }
