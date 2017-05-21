@@ -58,7 +58,7 @@ public class WordImages extends AbstractImageTest {
     @Test
     public void testFile_WordImageScaling_wPict() {
         final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
-                .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));
+                .openDocument(ROOT_IN.resolve("WordImageScaling_wPict.docx"));
         
         document.generate(
                 createImageScalingPage(),
