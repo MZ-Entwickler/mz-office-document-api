@@ -22,7 +22,15 @@
 package com.mz.solutions.mso.images;
 
 import com.mz.solutions.mso.AbstractOfficeTest;
+import com.mz.solutions.office.model.DataPage;
+import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.images.ImageResource;
+import com.mz.solutions.office.model.images.ImageValue;
+import com.mz.solutions.office.model.images.UnitOfLength;
+import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Ignore;
 
 @Ignore
@@ -31,5 +39,55 @@ abstract class AbstractImageTest extends AbstractOfficeTest {
     protected static final Path IMG_1 = ROOT_IN.resolve("img_result_1.png");
     protected static final Path IMG_2 = ROOT_IN.resolve("img_result_2.png");
     protected static final Path IMG_3 = ROOT_IN.resolve("img_result_3.png");
+    
+    protected final List<DataPage> createImageScalingPage() {
+        final ImageResource image1 = ImageResource.loadImage(IMG_1, PNG);
+        final ImageResource image2 = ImageResource.loadImage(IMG_2, PNG);
+        final ImageResource image3 = ImageResource.loadImage(IMG_3, PNG);
+        
+        final DataPage[] resultPages = new DataPage[2];
+        
+        { // PAGE 1 - OVERWRITE IMAGE DIMENSION
+            resultPages[0] = new DataPage();
+            resultPages[0].addValue(new DataValue("TEST_DESCR", "OverwriteDimension = True"));
+            
+            resultPages[0].addValue(new DataValue("IMAGE_1", new ImageValue(image1)
+                    .setTitle("Image 1").setDescription("2cm x 2cm")
+                    .setDimension(2, 2, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(true)));
+            
+            resultPages[0].addValue(new DataValue("IMAGE_2", new ImageValue(image2)
+                    .setTitle("Image 2").setDescription("4cm x 4cm")
+                    .setDimension(4, 4, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(true)));
+            
+            resultPages[0].addValue(new DataValue("IMAGE_3", new ImageValue(image3)
+                    .setTitle("Image 3").setDescription("15.5cm x 1.0cm")
+                    .setDimension(15.5, 1.0, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(true)));
+        }
+        
+        { // PAGE 2 - DO NOT OVERWRITE IMAGE DIMENSION
+            resultPages[1] = new DataPage();
+            resultPages[1].addValue(new DataValue("TEST_DESCR", "OverwriteDimension = False"));
+            
+            resultPages[1].addValue(new DataValue("IMAGE_1", new ImageValue(image1)
+                    .setTitle("Image 1").setDescription("2cm x 2cm")
+                    .setDimension(2, 2, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(false)));
+            
+            resultPages[1].addValue(new DataValue("IMAGE_2", new ImageValue(image2)
+                    .setTitle("Image 2").setDescription("4cm x 4cm")
+                    .setDimension(4, 4, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(false)));
+            
+            resultPages[1].addValue(new DataValue("IMAGE_3", new ImageValue(image3)
+                    .setTitle("Image 3").setDescription("15.5cm x 1.0cm")
+                    .setDimension(15.5, 1.0, UnitOfLength.CENTIMETERS)
+                    .setOverwriteDimension(false)));
+        }
+        
+        return Arrays.asList(resultPages);
+    }
     
 }

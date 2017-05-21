@@ -44,6 +44,26 @@ public class LibreOfficeImages extends AbstractImageTest {
     private static final Path INPUT_FILE_3 = ROOT_IN.resolve("LibreOfficeImagesInDocument_Tables.odt");
     
     @Test
+    public void testFile_LibreOfficeImageScaling_Image() {
+        final OfficeDocument document = OfficeDocumentFactory.newOpenOfficeInstance()
+                .openDocument(ROOT_IN.resolve("LibreOfficeImageScaling_Image.odt"));
+        
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("LibreOfficeImageScaling_Image_Output.odt")));
+    }
+    
+    @Test
+    public void testFile_LibreOfficeImageScaling_UserDefinedField() {
+        final OfficeDocument document = OfficeDocumentFactory.newOpenOfficeInstance()
+                .openDocument(ROOT_IN.resolve("LibreOfficeImageScaling_UserDefinedField.odt"));
+        
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("LibreOfficeImageScaling_UserDefinedField_Output.odt")));
+    }
+    
+    @Test
     public void testFile_LibreOfficeImagesInDocument() {
         testFile0(INPUT_FILE_1, "byLibreOffice", false);
     }

@@ -26,5 +26,5 @@ import org.junit.Ignore;
 
 @Ignore
 abstract class AbstractTableTest extends AbstractOfficeTest {
-    
+
 }

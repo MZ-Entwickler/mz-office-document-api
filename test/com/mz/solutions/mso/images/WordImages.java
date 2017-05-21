@@ -46,6 +46,42 @@ public class WordImages extends AbstractImageTest {
     private static final Path INPUT_FILE_2 = ROOT_IN.resolve("WordImagesInDocument_Tables.docx");
     
     @Test
+    public void testFile_WordImageScaling_wDrawing() {
+        final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
+                .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));
+        
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("WordImageScaling_wDrawing_Output.docx")));
+    }
+    
+    @Test
+    public void testFile_WordImageScaling_wPict() {
+        final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
+                .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));
+        
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("WordImageScaling_wPict_Output.docx")));
+    }
+    
+    @Test
+    public void testFile_WordImageScaling_Mergefield() {
+        final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
+                .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));
+        
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("WordImageScaling_Mergefield_UsingWDrawing_Output.docx")));
+        
+        document.getRelatedFactory().setProperty(MicrosoftProperty.USE_DRAWING_OVER_VML, Boolean.FALSE);
+        document.generate(
+                createImageScalingPage(),
+                ResultFactory.toFile(ROOT_OUT.resolve("WordImageScaling_Mergefield_UsingWPict_Output.docx")));
+        
+    }
+    
+    @Test
     public void testFile_WordImagesInDocument() {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(INPUT_FILE_1);

@@ -39,6 +39,15 @@ public class ImageValue extends ExtendedValue {
     @Nullable
     private String title, description;
     
+    /** Flag ob bestehende Abmaßungen überschrieben werden sollen. */
+    private boolean overwriteDimension = false;
+    
+    /** Breite des Bildes in Millimeter. */
+    private double width = UnitOfLength.CENTIMETERS.toMillimeters(3.0D);
+    
+    /** Höhe des Bildes in Millimeter. */
+    private double height = UnitOfLength.CENTIMETERS.toMillimeters(1.0D);
+    
     public ImageValue(ImageResource imgResource) {
         this.imgResource = Objects.requireNonNull(imgResource, "imgResource");
     }
@@ -57,12 +66,46 @@ public class ImageValue extends ExtendedValue {
         return this;
     }
     
+    public ImageValue setDimension(double width, double height, UnitOfLength unit) {
+        Objects.requireNonNull(unit, "unit");
+        
+        if (width <= 0.0D) {
+            throw new IllegalArgumentException("width <= 0.0");
+        }
+        
+        if (height <= 0.0D) {
+            throw new IllegalArgumentException("height <= 0.0");
+        }
+        
+        this.width = unit.toMillimeters(width);
+        this.height = unit.toMillimeters(height);
+        
+        return this;
+    }
+    
+    public ImageValue setOverwriteDimension(boolean overwriteExistingDimension) {
+        this.overwriteDimension = overwriteExistingDimension;
+        return this;
+    }
+    
     public Optional<String> getTitle() {
         return Optional.ofNullable(title);
     }
 
     public Optional<String> getDescription() {
         return Optional.ofNullable(description);
+    }
+    
+    public double getWidth() {
+        return this.width;
+    }
+    
+    public double getHeight() {
+        return this.height;
+    }
+
+    public boolean isOverwriteDimension() {
+        return overwriteDimension;
     }
 
     @Override

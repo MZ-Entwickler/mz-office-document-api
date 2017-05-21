@@ -39,6 +39,7 @@ import com.mz.solutions.office.model.images.ExternalImageResource;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.images.ImageValue;
+import com.mz.solutions.office.model.images.UnitOfLength;
 import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.nio.charset.StandardCharsets;
@@ -921,6 +922,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         overwriteDrawingElementIds(wDrawingElement);
         applyNonVisiblePropertiesToDrawingElement(wDrawingElement, imageValue);
         applyVisibleTextPropertiesToDrawingElement(wDrawingElement, imageValue);
+        applyVisiblePropertiesToDrawingElement(wDrawingElement, imageValue);
     }
     
     private void setupPictureElement(
@@ -931,6 +933,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
 
         applyNonVisiblePropertiesToPictureElement(wPictureElement, imageValue);
         applyVisibleTextPropertiesToPictureElement(wPictureElement, imageValue);
+        applyVisiblePropertiesToPictureElement(wPictureElement, imageValue);
     }
     
     private Element createDrawingElement(Document document) {
@@ -949,8 +952,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         wpInline.setAttribute("distT", "0");
         
         final Element wpExtend = (Element) wpInline.appendChild(document.createElement("wp:extent"));
-        wpExtend.setAttribute("cy", "357751");
-        wpExtend.setAttribute("cx", "573151");
+        wpExtend.setAttribute("cy", "");    // wird überschrieben
+        wpExtend.setAttribute("cx", "");    // wird überschrieben
         
         final Element wpEffectExtent = (Element) wpInline.appendChild(document.createElement("wp:effectExtent"));
         wpEffectExtent.setAttribute("r", "2540");
@@ -1032,8 +1035,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         aOff.setAttribute("x", "0");
         
         final Element aExt2 = (Element) aXfrm.appendChild(document.createElement("a:ext")); // !! 2 !!
-        aExt2.setAttribute("cy", "357751");
-        aExt2.setAttribute("cx", "573151");
+        aExt2.setAttribute("cy", "");   // wird überschrieben
+        aExt2.setAttribute("cx", "");   // wird überschrieben
         
         // w:drawing > wp:inline > a:graphic > a:graphicData > pic:pic > pic:spPr > a:prstGeom
         final Element aAvLst = (Element) aPrstGeom.appendChild(document.createElement("a:avLst"));
@@ -1183,12 +1186,65 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         picCNvPr.setAttribute("name", (null == prName) ? "" : prName);
     }
     
+    private void applyVisiblePropertiesToDrawingElement(Element wDrawing, ImageValue imageValue) {
+        // Erstmal die Breite und Höhe aus dem Feld wp:extent
+        @Nullable final Element wpExtent = elementByTagName("wp:extent", wDrawing).orElse(null);
+        
+        // Nun auch die Breite und Höhe aus der erweiterten Einstellung aus a:ext
+        // aber, a:ext taucht zwei mal auf, wir benötigen das Kind-Element aus a:xfrm
+        @Nullable final Element aExt;
+        {
+            final Element aXfrm = elementByTagName("a:xfrm", wDrawing).orElse(null);
+            if (null != aXfrm) {
+                aExt = elementByTagName("a:ext", aXfrm).orElse(null);
+            } else {
+                aExt = null;
+            }
+        }
+        
+        // Eigentlich müssen immer beide Felder belegt sein, aber wir gehen auch davon aus
+        // das es ggf. nur eines der beiden belegt ist.
+        // Wenn auch nur eines der Elemente fehlt, dann nehmen wir halt das andere pfff
+        final Element dimCheckElement = (null != wpExtent ? wpExtent : aExt);
+        if (null == dimCheckElement) {
+            // Okay... beide NULL? Dann lassen wir die Finger davon.
+            return;
+        }
+        
+        final boolean hasExistingDimension = dimCheckElement.getAttribute("cx").isEmpty() == false
+                && dimCheckElement.getAttribute("cy").isEmpty() == false;
+        
+        if (hasExistingDimension && imageValue.isOverwriteDimension() == false) {
+            // Okay, Abmaße sind angegeben und sollen nicht überschrieben werden.
+            return;
+        }
+        
+        final double imgWidth = imageValue.getWidth();
+        final double imgHeight = imageValue.getHeight();
+        
+        final long emuWidth = (long) UnitOfLength.MILLIMETERS.toEnglishMetricUnits(imgWidth);
+        final long emuHeight = (long) UnitOfLength.MILLIMETERS.toEnglishMetricUnits(imgHeight);
+        
+        final String attrWidth = Long.toString(emuWidth);
+        final String attrHeight = Long.toString(emuHeight);
+        
+        if (null != wpExtent) {
+            wpExtent.setAttribute("cx", attrWidth);
+            wpExtent.setAttribute("cy", attrHeight);
+        }
+        
+        if (null != aExt) {
+            aExt.setAttribute("cx", attrWidth);
+            aExt.setAttribute("cy", attrHeight);
+        }
+    }
+    
     private Element createPictureElement(Document document) {
         final Element wPict = document.createElement("w:pict");
         final Element vShape = (Element) wPict.appendChild(document.createElement("v:shape"));
         vShape.setAttribute("id", "vShapeImage0");
         vShape.setAttribute("type", "#_x0000_t75");
-        vShape.setAttribute("style", "width:auto; height:auto");
+        vShape.setAttribute("style", "");           // wird überschrieben
         
         final Element vImagedata = (Element) vShape.appendChild(document.createElement("v:imagedata"));
         vImagedata.setAttribute("r:id", "##ERROR##");
@@ -1239,6 +1295,69 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         } else {
             vImagedata.setAttribute("o:title", prTitle);
         }
+    }
+    
+    private void applyVisiblePropertiesToPictureElement(Element wPict, ImageValue imgValue) {
+        final Element vShape = elementByTagName("v:shape", wPict).orElse(null);
+        if (null == vShape) return; // Merkwürdig wenn so, aber lassen wir mal so stehen
+        
+        final String oldAttr = vShape.getAttribute("style");
+        
+        final boolean hasExistingDimension = oldAttr.isEmpty() == false
+                && oldAttr.contains("width") && oldAttr.contains("height");
+        
+        if (hasExistingDimension && imgValue.isOverwriteDimension() == false) {
+            // Bestehende Abmaße beibehalten und nicht überschreiben. Wie gewünscht, Sir.
+            return;
+        }
+        
+        final String imageWidth = String.format("%.4f", imgValue.getWidth()) + "mm";
+        final String imageHeight = String.format("%.4f", imgValue.getHeight()) + "mm";
+        
+        final String styleWidthToken = "width:" + imageWidth;
+        final String styleHeightToken = "height:" + imageHeight;
+        
+        // Okay, Höhe und Breite sollen überschrieben werden. Wenn das "style" Feld leer ist, dann
+        // ist es wirklich einfach. Also:
+        if (oldAttr.isEmpty()) {
+            vShape.setAttribute("style", "width:" + imageWidth + ";height:" + imageHeight);
+            return;
+        }
+        
+        // Okay, Attribut 'style' ist nicht leer. Das ist blöd. Die alten 'width' und 'height'
+        // müssen raus. Wir trennen jedes Semikolon und suchen dann nach der den Feldern und
+        // überschreiben diese mit unseren Werten.
+        final StringTokenizer styleToken = new StringTokenizer(oldAttr, ";");
+        final ArrayList<Object> enumerationList = Collections.list(styleToken);
+        final List<String> tokenList = new ArrayList<>(enumerationList.size());
+        
+        boolean tokenWidthReplaced = false;
+        boolean tokenHeightReplaced = false;
+        
+        // Alle Style-Token durchschauen. Wenn 'width:' oder 'height:' auftreten, dann mit unseren
+        // ersetzen. Wenn danach einer der beiden fehlt, dann fügen wir den einfach dazu.
+        for (Object objStyleToken : enumerationList) {
+            final String token = (String) objStyleToken;
+            
+            if (token.toLowerCase().startsWith("width:")) {
+                tokenList.add(styleWidthToken);
+                tokenWidthReplaced = true;
+                
+            } else  if (token.toLowerCase().startsWith("height:")) {
+                tokenList.add(styleHeightToken);
+                tokenHeightReplaced = true;
+                
+            } else {
+                tokenList.add(token);
+            }
+        }
+        
+        // Wenn einer der beiden fehlt (warum auch immer), dann noch hinzufügen
+        if (tokenWidthReplaced == false) tokenList.add(styleWidthToken);
+        if (tokenHeightReplaced == false) tokenList.add(styleHeightToken);
+        
+        // Alles wieder brav mit Semikolon trennen und zurück setzen
+        vShape.setAttribute("style", String.join(";", tokenList));
     }
     
     private Element createRelationshipImageEmbeddedElement(Document document, String imageTarget, String rId) {

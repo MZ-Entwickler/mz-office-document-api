@@ -435,6 +435,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         
         overwriteDrawFrameLink(drawFrame, imagePath);
         applyNonVisualProperties(drawFrame, imageValue);
+        applyVisualProperties(drawFrame, imageValue);
     }
     
     private void overwriteDrawFrameLink(Element drawFrame, String imagePath) {
@@ -468,11 +469,28 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
     }
     
+    private void applyVisualProperties(Element drawFrame, ImageValue imageValue) {
+        final String attrSvgHeight = drawFrame.getAttribute("svg:height");
+        final String attrSvgWidth = drawFrame.getAttribute("svg:width");
+        
+        final boolean dimensionExists = !attrSvgHeight.isEmpty() && !attrSvgWidth.isEmpty();
+        
+        if (dimensionExists && imageValue.isOverwriteDimension() == false) {
+            return;
+        }
+        
+        final String newHeight = String.format("%.4f", imageValue.getHeight()) + "mm";
+        final String newWidth = String.format("%.4f", imageValue.getWidth()) + "mm";
+        
+        drawFrame.setAttribute("svg:height", newHeight);
+        drawFrame.setAttribute("svg:width", newWidth);
+    }
+    
     private Element createDrawFrameElement() {
         final Element drawFrame = newContent.createElement("draw:frame");
         drawFrame.setAttribute("draw:name", "");                // überschreiben
-        drawFrame.setAttribute("svg:height", "1.5cm");          // überschreiben
-        drawFrame.setAttribute("svg:width", "4cm");             // überschreiben
+        drawFrame.setAttribute("svg:height", "");               // überschreiben
+        drawFrame.setAttribute("svg:width", "");                // überschreiben
         drawFrame.setAttribute("draw:style-name", "");          // überschreiben
         drawFrame.setAttribute("style:rel-height", "scale");
         drawFrame.setAttribute("style:rel-width", "scale");
