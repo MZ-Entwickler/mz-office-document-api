@@ -68,7 +68,7 @@ public class WordImages extends AbstractImageTest {
     @Test
     public void testFile_WordImageScaling_Mergefield() {
         final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
-                .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));
+                .openDocument(ROOT_IN.resolve("WordImageScaling_Mergefield.docx"));
         
         document.generate(
                 createImageScalingPage(),
