@@ -38,8 +38,10 @@ import com.mz.solutions.office.model.images.ImageValue;
 import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.nio.file.Path;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -71,6 +73,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     private volatile ZIPDocumentFile newDocumentFile;
     
     private volatile int imageCounter = 16_000;
+    private volatile Map<ImageResource, String> cacheImageResources = new IdentityHashMap<>();
     
     public OpenDocument(OfficeDocumentFactory factory, Path document) {
         super(factory, document, ZIP_DOC_CONTENT, ZIP_DOC_STYLES);
@@ -95,11 +98,13 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         
         this.newDocumentFile = sourceDocumentFile.cloneDocument();
         this.imageCounter = 16_000;
+        this.cacheImageResources.clear();
         
         try {
             fillDocuments0(dataPages);
             return newDocumentFile;
         } finally {
+            this.cacheImageResources.clear();
             this.newContent = this.newStyles = this.newManifest = null;
             this.newDocumentFile = null;
         }
@@ -502,6 +507,10 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 imageResource.getImageFormatType(),
                 "ImageResource#getImageFormatType() == null");
         
+        if (cacheImageResources.containsKey(imageResource)) {
+            return cacheImageResources.get(imageResource);
+        }
+        
         final boolean isExternalResource = imageResource instanceof LocalImageResource
                 || imageResource instanceof ExternalImageResource;
         
@@ -509,10 +518,19 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             // Resource ist extern, und soll anhand der Einstellungen nicht eingebunden werden.
             // Der zurück gegebene Pfad ist dementsprechend extern und wird nicht registriert
             if (imageResource instanceof ExternalImageResource) {
-                return ((ExternalImageResource) imageResource).getResourceURL().toString();
+                final String resourceURL =  ((ExternalImageResource) imageResource)
+                        .getResourceURL().toString();
+                
+                this.cacheImageResources.put(imageResource, resourceURL);
+                
+                return resourceURL;
             } else if (imageResource instanceof LocalImageResource) {
-                return "file:///" + ((LocalImageResource) imageResource).getLocalResource()
-                        .toAbsolutePath().toString().replace('\\', '/');
+                final String localFilePath = "file:///" + ((LocalImageResource) imageResource)
+                        .getLocalResource().toAbsolutePath().toString().replace('\\', '/');
+                
+                this.cacheImageResources.put(imageResource, localFilePath);
+                
+                return localFilePath;
             }
         }
         
@@ -539,6 +557,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         newDocumentFile.createNewFileInZip(imagePath);
         newDocumentFile.overwrite(imagePath, Objects.requireNonNull(
                 imageResource.loadImageData(), "ImageResource#loadData() == null"));
+        
+        this.cacheImageResources.put(imageResource, imagePath);
         
         return imagePath;
     }

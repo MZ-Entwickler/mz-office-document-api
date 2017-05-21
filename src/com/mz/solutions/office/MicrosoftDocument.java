@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -93,6 +94,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     /** Zählt die Anzahl der eingefügten Bilder; muss vor Ersetzungsvorgang zurückgesetzt werden. */
     private volatile int imageCounter = 0;
+    private volatile Map<ImageResource, Object[]> cacheImageResources = new IdentityHashMap<>();
 
     public MicrosoftDocument(OfficeDocumentFactory factory, Path document) {
         super(factory, document, ZIP_DOC_DOCUMENT, ZIP_DOC_STYLES);
@@ -170,6 +172,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             final ZIPDocumentFile outputDocument) {
         
         this.imageCounter = 16_000;
+        this.cacheImageResources.clear();
         
         final Document newContent = (Document) sourceContent.cloneNode(true);
         final Document newStyles = (Document) sourceStyles.cloneNode(true);
@@ -239,7 +242,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         final Node wordBodyParent = wordBody.getParentNode();
         wordBodyParent.insertBefore(newWordBody, wordBody);
         wordBodyParent.removeChild(wordBody);
-        
+
+        this.cacheImageResources.clear();
         
         removeAllBookmarkTags(newContent);
         
@@ -851,6 +855,11 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         };
         
         final ImageResource imageResource = imageValue.getImageResource();
+        if (cacheImageResources.containsKey(imageResource)) {
+            // Dann wurde diese Resource schon mal registriert und dem Dokument beigefügt.
+            return cacheImageResources.get(imageResource);
+        }
+        
         final ImageResourceType imageType = imageResource.getImageFormatType();
         
         final String imgRelId = "rImgId" + UUID.randomUUID().toString().replace("-", "");
@@ -893,6 +902,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         
         resultArray[0] = imgRelId;
         resultArray[1] = usedResourceKeepsExternal;
+        
+        this.cacheImageResources.put(imageResource, resultArray);
         
         return resultArray;
     }
@@ -1228,22 +1239,6 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         } else {
             vImagedata.setAttribute("o:title", prTitle);
         }
-        
-//        // v:imagedata[o:althref]
-//        final ImageResource imgRes = imgValue.getImageResource();
-//        if (imgRes instanceof LocalImageResource || imgRes instanceof ExternalImageResource) {
-//            final String prOHref;
-//            
-//            if (imgRes instanceof LocalImageResource) {
-//                prOHref = ((LocalImageResource) imgRes).getLocalResource().toString();
-//            } else {
-//                prOHref = ((ExternalImageResource) imgRes).getResourceURL().toString();
-//            }
-//            
-//            vImagedata.setAttribute("o:althref", prOHref);
-//        } else {
-//            vImagedata.removeAttribute("o:althref");
-//        }
     }
     
     private Element createRelationshipImageEmbeddedElement(Document document, String imageTarget, String rId) {
