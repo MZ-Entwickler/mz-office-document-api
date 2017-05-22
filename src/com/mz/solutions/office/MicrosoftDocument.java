@@ -861,7 +861,18 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             return cacheImageResources.get(imageResource);
         }
         
-        final ImageResourceType imageType = imageResource.getImageFormatType();
+        final ImageResourceType imageType;
+        {
+            final ImageResourceType orignMimeType = Objects.requireNonNull(
+                    imageResource.getImageFormatType(),
+                    "ImageResourceType#getImageFormatType()");
+            
+            if (orignMimeType instanceof MicrosoftImageResourceType) {
+                imageType = orignMimeType;
+            } else {
+                imageType = convert(orignMimeType, MicrosoftImageResourceType.values());
+            }
+        }
         
         final String imgRelId = "rImgId" + UUID.randomUUID().toString().replace("-", "");
         
@@ -1386,7 +1397,6 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     }
     
     private void registerRelIdForImage0(Document document, String imageTarget, String rId, boolean createEmbeddedId) {
-        // TODO: nicht einfach von Index 0 nehmen, sondern prüfen ob dort überhaupt ein Element ist!
         final Element rootRelElement = (Element) document.getElementsByTagName("Relationships").item(0);
         final NodeList relationshipList = rootRelElement.getChildNodes();
         

@@ -25,12 +25,15 @@ import com.mz.solutions.office.OfficeDocumentException.FailedDocumentGenerationE
 import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForImplementation;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Arrays;
+import static java.util.Collections.disjoint;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -189,6 +192,48 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     
     protected abstract ZIPDocumentFile createAndFillDocument(
             final Iterator<DataPage> dataPages);
+    
+    /**
+     * Nimmt den übergebenen MIME-Type an und versucht zu diesem einen passenden zu finden aus der
+     * eigenen Liste der MIME-Typen.
+     * 
+     * <p>Ist der MIME-Type direkt in der Liste {@code mimeTypeList}, wird dieser zurück gegeben.
+     * Ansonsten wird zuerst anhand des MIME-Types (String) vergleichen und gesucht und danach nach
+     * einer passenden Datennamens-Erweiterung. Wurde kein passender MIME-Type aus
+     * {@code mimeTypeList} gefunden, wird der ursprünglich übergebene zurück gegeben.</p>
+     * 
+     * @param mimeType      Im Daten-Modell übergebener MIME-Type.
+     * @param mimeTypeList  Liste der von der Office-Implementierung unterstützten MIME-Types.
+     * @return              Soweit wie möglich passender MIME-Type zur Implementierung, ansonsten
+     *                      der ursprünglich in {@code mimeType} übergebene.
+     */
+    protected final ImageResourceType convert(
+            final ImageResourceType mimeType, final ImageResourceType[] mimeTypeList)
+    {
+        final String inMimeType = mimeType.getMimeType();
+        
+        // Schauen ob wir den selben haben anhand des MIME-Types direkt
+        for (ImageResourceType singleType : mimeTypeList) {
+            if (inMimeType.equalsIgnoreCase(singleType.getMimeType())) {
+                return singleType;
+            }
+        }
+        
+        // Wohl ein Schuss im Ofen, also suchen wir nach einer Dateinamens-Erweiterung die passen
+        // könnte.
+        final String[] inExtensions = mimeType.getFileNameExtensions();
+        final List<String> inExtList = Arrays.asList(inExtensions);
+
+        for (ImageResourceType singleType : mimeTypeList) {
+            final List<String> otherExtList = Arrays.asList(singleType.getFileNameExtensions());
+            
+            if (disjoint(inExtList, otherExtList) == false) {
+                return singleType;
+            }
+        }
+        
+        return mimeType;
+    }
     
     ////////////////////////////////////////////////////////////////////////////
     // Methoden zum Abfragen der Standard-Einstellungen

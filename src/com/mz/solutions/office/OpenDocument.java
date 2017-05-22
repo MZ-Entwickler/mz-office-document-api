@@ -521,9 +521,18 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private String registerImageResource(ImageResource imageResource) {
-        final ImageResourceType mimeType = Objects.requireNonNull(
-                imageResource.getImageFormatType(),
-                "ImageResource#getImageFormatType() == null");
+        final ImageResourceType mimeType;
+        {
+            final ImageResourceType originMimeType = Objects.requireNonNull(
+                    imageResource.getImageFormatType(),
+                    "ImageResource#getImageFormatType() == null");
+            
+            if (originMimeType instanceof OpenDocumentImageResourceType) {
+                mimeType = originMimeType;
+            } else {
+                mimeType = convert(originMimeType, OpenDocumentImageResourceType.values());
+            }
+        }
         
         if (cacheImageResources.containsKey(imageResource)) {
             return cacheImageResources.get(imageResource);
