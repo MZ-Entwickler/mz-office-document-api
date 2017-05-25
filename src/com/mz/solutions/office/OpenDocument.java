@@ -223,7 +223,44 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         
         final List<Node> tableRows = walkTableRows(tableNode).asList();
         
-        final int dataRowIndex = tableRows.size() == 1 ? 0 : 1;
+        final int dataRowIndex;// = tableRows.size() - 1; // tableRows.size() == 1 ? 0 : 1;
+        final boolean thereIsNoDataRow;
+        
+        if (hasTableHeaderRows(tableNode)) {
+            int assumedDataRowIndex = -1; // Keine Data-Row
+            
+            for (int tableRowIndex = 0; tableRowIndex < tableRows.size(); tableRowIndex++) {
+                final Element tableRow = (Element) tableRows.get(tableRowIndex);
+                final Node tableRowParent = tableRow.getParentNode();
+                
+                if (tableRowParent instanceof Element == false) continue;
+                
+                final boolean isHeaderRow = ((Element) tableRowParent).getNodeName()
+                        .equals("table:table-header-rows");
+                
+                if (isHeaderRow) {
+                    continue;   // Kopf-Zeilen ignorieren wir einfach
+                } else {
+                    assumedDataRowIndex = tableRowIndex;
+                    break;
+                }
+            }
+            
+            // Wenn dataRowIndex||assumedDataRowIndex == -1 dann:
+            // Keine Datenzeile gefunden? Dann sind alles Kopf-Zeilen. Ersetzungsvorgang
+            // kann somit nach dem Ersetzen der Kopfzeilen enden.
+            if (assumedDataRowIndex == -1) {
+                thereIsNoDataRow = true;
+            } else {
+                thereIsNoDataRow = false;
+            }
+            
+            dataRowIndex = assumedDataRowIndex;
+        } else {
+            dataRowIndex = tableRows.size() == 1 ? 0 : 1;
+            thereIsNoDataRow = false;
+        }
+        
         final Node tableDataRow = tableRows.get(dataRowIndex);
         
         // Alle Zeilen die NICHT die zu wiederholende Datenzeilen sind
@@ -234,6 +271,11 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             }
             
             replaceUserFieldsAndImages(tableRows.get(i), tableData.get());
+        }
+        
+        if (thereIsNoDataRow) {
+            // Keine Datenzeile vorhanden. Also kann die Ersetzung jener ausfallen.
+            return;
         }
         
         final Iterator<DataTableRow> rowIterator = tableData.get().iterator();
@@ -247,6 +289,24 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
         
         tableNode.removeChild(tableDataRow);
+    }
+    
+    private boolean hasTableHeaderRows(Node tableNode) {
+        final NodeList tableChilds = tableNode.getChildNodes();
+        
+        if (tableChilds.getLength() == 0)  return false;
+        
+        for (int i = 0; i < tableChilds.getLength(); i++) {
+            final Node tableChildNode = tableChilds.item(i);
+            
+            if (tableChildNode instanceof Element == false) continue;
+            
+            if (((Element) tableChildNode).getNodeName().equals("table:table-header-rows")) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     private void replaceUserFieldNode(Node userFieldNode, DataValueMap values) {
