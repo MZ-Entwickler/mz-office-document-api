@@ -44,6 +44,14 @@ public class LibreOfficeImages extends AbstractImageTest {
     private static final Path INPUT_FILE_3 = ROOT_IN.resolve("LibreOfficeImagesInDocument_Tables.odt");
     
     @Test
+    public void testFile_LibreOfficeDummyImages() {
+        OfficeDocumentFactory.newOpenOfficeInstance()
+                .openDocument(ROOT_IN.resolve("LibreOfficeDummyImages.odt"))
+                .generate(create16ColorValuesPage(), ResultFactory
+                        .toFile(ROOT_OUT.resolve("LibreOfficeDummyImages_Output.odt")));
+    }
+    
+    @Test
     public void testFile_LibreOfficeImageScaling_Image() {
         final OfficeDocument document = OfficeDocumentFactory.newOpenOfficeInstance()
                 .openDocument(ROOT_IN.resolve("LibreOfficeImageScaling_Image.odt"));

@@ -46,6 +46,14 @@ public class WordImages extends AbstractImageTest {
     private static final Path INPUT_FILE_2 = ROOT_IN.resolve("WordImagesInDocument_Tables.docx");
     
     @Test
+    public void testFile_WordDummyImages() {
+        OfficeDocumentFactory.newMicrosoftOfficeInstance()
+                .openDocument(ROOT_IN.resolve("WordDummyImages.docx"))
+                .generate(create16ColorValuesPage(), ResultFactory
+                        .toFile(ROOT_OUT.resolve("WordDummyImages_Output.docx")));
+    }
+    
+    @Test
     public void testFile_WordImageScaling_wDrawing() {
         final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
                 .openDocument(ROOT_IN.resolve("WordImageScaling_wDrawing.docx"));

@@ -23,11 +23,13 @@ package com.mz.solutions.mso.images;
 
 import com.mz.solutions.mso.AbstractOfficeTest;
 import com.mz.solutions.office.model.DataPage;
+import com.mz.solutions.office.model.DataTable;
+import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageValue;
-import com.mz.solutions.office.model.images.UnitOfLength;
 import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
+import com.mz.solutions.office.model.images.UnitOfLength;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -88,6 +90,37 @@ abstract class AbstractImageTest extends AbstractOfficeTest {
         }
         
         return Arrays.asList(resultPages);
+    }
+    
+    protected final DataPage create16ColorValuesPage() {
+        final DataPage resultPage = new DataPage();
+        final DataTable tableColors = new DataTable("TCOLORS");
+        
+        final String[] hexValues = {
+            "000000", "9D9D9D", "FFFFFF", "BE2633",
+            "E06F8B", "493C2B", "A46422", "EB8931",
+            "F7E26B", "2F484E", "44891A", "A3CE27",
+            "1B2632", "005784", "31A2F2", "B2DCEF"
+        };
+        
+        for (int i = 0; i < hexValues.length; i++) {
+            tableColors.addTableRow(new DataTableRow(
+                    colorValue("#" + hexValues[i]),
+                    colorImage(Integer.parseInt(hexValues[i], 16))));
+        }
+        
+        resultPage.addTable(tableColors);
+        
+        return resultPage;
+    }
+    
+    private DataValue colorValue(String value) {
+        return new DataValue("COLOR_VALUE", value);
+    }
+    
+    private DataValue colorImage(int rgbColor) {
+        return new DataValue("COLOR_IMAGE", new ImageValue(ImageResource.dummyColorImage(rgbColor))
+                .setDimension(12.5, 1, UnitOfLength.CENTIMETERS));
     }
     
 }

@@ -80,6 +80,34 @@ public interface ImageResource {
         return new StandardImageResource.ExternalImgResImpl(imageURL, imgType);
     }
     
+    public static ImageResource dummyColorImage(int rgbColor) {
+        return dummyColorImage(
+                (rgbColor >> 16) & 0xFF,
+                (rgbColor >>  8) & 0xFF,
+                (rgbColor >>  0) & 0xFF);
+    }
+    
+    public static ImageResource dummyColorImage(int red, int green, int blue) {
+        red = (red < 0x00 ? 0x00 : (red > 0xFF ? 0xFF : red));
+        green = (green < 0x00 ? 0x00 : (green > 0xFF ? 0xFF : green));
+        blue = (blue < 0x00 ? 0x00 : (blue > 0xFF ? 0xFF : blue));
+        
+        final byte[] bmpImageData = new byte[] {
+            (byte) 0x42, (byte) 0x4D, (byte) 0x3A, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x36, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x28, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x18, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x04, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0xC4, (byte) 0x0E, (byte) 0x00, (byte) 0x00,
+            (byte) 0xC4, (byte) 0x0E, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) blue, (byte) green, (byte) red, (byte) 0x00
+        };
+        
+        return loadImage(bmpImageData, StandardImageResourceType.BMP);
+    }
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////
     
     public ImageResourceType getImageFormatType();
