@@ -158,5 +158,60 @@
  * Word-bekannte Feldbefehle enthalten.<br><br>
  * Word-Dokumente ab Version 2007 im Open XML Document Format ({@code DOCX})
  * werden unterstützt.</p>
+ * 
+ * <p><b>Umgang mit dem Einsetzen/Ersetzen von Bildern in Dokumenten:</b><br>
+ * Bilder können in Vorlage-Dokumenten eingesetzt sowie durch andere ersetzt werden. Bei
+ * Text-Platzhaltern (MergeFields bei Microsoft, User-Def-Fields bei Libre/Openoffice), wird bei
+ * einem Bild-Wert {@link com.mz.solutions.office.model.images.ImageValue} an jene Stelle das
+ * als {@link com.mz.solutions.office.model.images.ImageResource} geladene Bild eingesetzt unter
+ * Verwendung der angegebenen Abmaße aus dem Bild-Wert.<br>
+ * Bestehende Bilder können ersetzt/ausgetauscht werden und, wenn gewünscht, deren bestehenden
+ * Abmaße in der Vorlage mit eigenen überschrieben/ersetzt werden. Bild-Platzhalter, also in der
+ * Vorlage bereits existierende Bilder, werden als Platzhalter erkannt, wenn dem Bild in der
+ * Vorlage in den Eigenschaften [Titel, Name, Beschreibung, Alt-Text] ein bekannter Platzhalter
+ * mit Bild-Wert angegeben wurde. Genaueres ist den folgenden Klassen zu entnehmen:</p>
+ * 
+ * <pre>
+ *  {@link com.mz.solutions.office.model.images.ImageResource}
+ *  Bild-Datei/-Resource (Bild als Byte-Array mit Angabe des Formates)
+ * 
+ *  {@link com.mz.solutions.office.model.images.ImageValue}
+ *  Bild-Wert (Resource) mit weiteren Angaben wie Titel (optional), Beschreibung (optional)
+ *  und anzuwendende Abmaße.
+ * </pre>
+ * 
+ * <p>Ein Bild-Wert ({@link com.mz.solutions.office.model.images.ImageValue}) besitzt eine
+ * zugeordnete Bild-Resource ({@link com.mz.solutions.office.model.images.ImageResource}). Eine
+ * Bild-Resource kann mehrfach/gleichzeitig in mehreren Bild-Werten verwendet werden.
+ * Das Wiederverwenden von Bild-Resourcen führt zu deutlich kleineren Ergebnis-Dokumenten. Jene
+ * Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.</p>
+ * 
+ * <pre>
+ *  ImageResource imageData1 = ImageResource.loadImage(
+ *          Paths.get("image_1.png"), StandardImageResourceType.PNG);
+ * 
+ *  ImageResource imageData2 = ImageResource.loadImage(
+ *          Paths.get("image_2.bmp"), StandardImageResourceType.BMP);
+ * 
+ *  ImageValue image1Small = new ImageValue(imageData1)
+ *          .setDimension(0.5D, 0.5D, UnitOfLength.CENTIMETERS)     // default 3cm x 1cm
+ *          .setTitle("Image Title")                                // optional
+ *          .setDescription("Alternative Text Description");        // optional
+ * 
+ *  ImageValue image1Large = new ImageValue(imageData1) // same image as image1Small (sharing res.)
+ *          .setDimension(15, 15, UnitOfLength.CENTIMETERS);
+ * 
+ *  ImageValue image2 = new ImageValue(imageData2)
+ *          .setDimension(40, 15, UnitOfLength.MILLIMETERS)
+ *          .setOverrideDimension(true);
+ * 
+ *  // Assigning ImageValue's to DataValue's
+ *  final DataPage page = new DataPage();
+ * 
+ *  page.addValue(new DataValue("IMAGE_1_SMALL", image1Small));
+ *  page.addValue(new DataValue("IMAGE_1_LARGE", image1Large));
+ *  page.addValue(new DataValue("IMAGE_2", image2));
+ *  page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
+ * </pre>
  */
 package com.mz.solutions.office;

@@ -45,6 +45,16 @@ import javax.annotation.Nullable;
  *          .setOverwriteDimension(true)                        // default false
  *          .setTitle("Image Title")                            // optional, default nothing
  *          .setDescription("Image Description/Alt-Text");      // optional, default nothing
+ * 
+ *  // DataValue erzeugen um benannte Text-Platzhalter oder Bild-Platzhalter zu erzuegen
+ *  final DataValue value1 = new DataValue("IMAGE_1", imageValue);
+ *  final DataValue value2 = new DataValue("IMAGE_2", imageValue);
+ * 
+ *  // Ein Text-Platzhalter namens 'IMAGE_1' sowie 'IMAGE_2' wird nun anstelle von Text mit dem
+ *  // geladenen Bild ersetzt.
+ *  // Existiert im Vorlagen-Dokument ein Bild, in dessen Eigenschaften [Name, Titel, Beschreibung,
+ *  // Alt-Text] einer der beiden Platzhalter-Namen auftaucht, wird jenes Bild durch das selbst
+ *  // geladene Bild ersetzt.
  * </pre>
  * 
  * <p><b>Einsetzen/Einfügen eines Bildes an der Stelle eines Text-Platzhalters:</b> Liegt ein
