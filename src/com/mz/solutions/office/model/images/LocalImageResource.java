@@ -28,10 +28,23 @@ import java.nio.file.Path;
  * vom Format unterstützt, nicht in das Dokument fest eingebunden werden soll, sondern von der
  * externen Datei bezogen werden soll.
  * 
+ * @see ImageResource
+ * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public interface LocalImageResource extends ImageResource {
     
+    /**
+     * Erzeugt eine lokale Bild-Resource.
+     * 
+     * <p>Identisch zur Methode: {@link ImageResource#useLocalFile(Path, ImageResourceType)}.</p>
+     * 
+     * @param imageFile     Datei
+     * 
+     * @param formatType    Bild-Format
+     * 
+     * @return              Lokale Bild-Resource
+     */
     public static LocalImageResource useLocalFile(Path imageFile, ImageResourceType formatType) {
         return ImageResource.useLocalFile(imageFile, formatType);
     }

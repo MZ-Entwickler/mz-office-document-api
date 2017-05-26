@@ -21,8 +21,21 @@
  */
 package com.mz.solutions.office.model.images;
 
+import com.mz.solutions.office.MicrosoftImageResourceType;
+import com.mz.solutions.office.OpenDocumentImageResourceType;
+
 /**
- *
+ * Zu implementierende Schnittstelle um der jeweiligen Office-Implementierung das Bild-Format
+ * anzugeben mit MIME-Type, möglichen Dateinamens-Erweiterungen und einer UI-tauglichen Bezeichnung.
+ * 
+ * <p>Dazu liegen bereits folgende Vorimplementierungen vor:</p>
+ * 
+ * <pre>
+ *  {@link StandardImageResourceType}       Standard-Formate (BMP, JPG, GIF, PNG)
+ *  {@link OpenDocumentImageResourceType}   Unterstützte Formate für Libre-/Open-Office
+ *  {@link MicrosoftImageResourceType}      Unterstützte Formate für Microsoft Office
+ * </pre>
+ * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public interface ImageResourceType {

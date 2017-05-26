@@ -80,16 +80,25 @@ public enum OpenDocumentImageResourceType implements ImageResourceType {
         this.fileNameExtensions = fileNameExtensions;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getFileTypeName() {
         return description;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getMimeType() {
         return mimeType;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String[] getFileNameExtensions() {
         return fileNameExtensions;

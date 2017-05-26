@@ -27,7 +27,7 @@ import com.mz.solutions.office.model.images.StandardImageResourceType;
 /**
  * Von Microsoft Office unterstütze Bild-Formate.
  * 
- * <p>Enthält alle Standardformate aus {@link StandardImageResourceType}.</p>
+ * <p>Enthält auch alle Standardformate aus {@link StandardImageResourceType}.</p>
  * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
@@ -67,16 +67,25 @@ public enum MicrosoftImageResourceType implements ImageResourceType {
         this.fileNameExtensions = fileNameExtensions;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getFileTypeName() {
         return description;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getMimeType() {
         return mimeType;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String[] getFileNameExtensions() {
         return fileNameExtensions;

@@ -28,10 +28,22 @@ import java.net.URL;
  * Dokument eingebunden werden soll, sondern von der URL beim Öffnen des Dokumentes bezogen
  * werden soll.
  * 
+ * @see ImageResource
+ * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public interface ExternalImageResource extends ImageResource {
     
+    /**
+     * Erzeugt eine externe Bild-Resource.
+     * 
+     * <p>Identisch zur Methode {@link ImageResource#useExternalFile(URL, ImageResourceType)}.</p>
+     * 
+     * @param imageURL  URL der Bild-Resource
+     * @param imgType   Bild-Format
+     * 
+     * @return          Externe Bild-Resource
+     */
     public static ExternalImageResource useExternalFile(URL imageURL, ImageResourceType imgType) {
         return ImageResource.useExternalFile(imageURL, imgType);
     }

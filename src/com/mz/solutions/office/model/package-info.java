@@ -77,6 +77,16 @@
  *  invoiceDocument.addValue(new DataValue("Vorname", "Max"));
  *  invoiceDocument.addValue(new DataValue("ReDatum", "2015-01-01"));
  * 
+ *  // Angeben des Unternehmens-Logos im Rechnungs-Dokument
+ *  ImageResource companyLogoImage = ImageResource.loadImage(
+ *          Paths.get("company.png"), StandardImageResourceType.PNG);
+ * 
+ *  ImageValue companyLogo = new ImageValue(companyLogoImage)
+ *          .setTitle("Big Example AG")
+ *          .setDescription("Big Company Logo");
+ * 
+ *  invoiceDocument.addValue(new DataValue("Logo", companyLogo);
+ * 
  *  // Tabelle mit den Rechnungsposten
  *  DataTable invoiceItems = new DataTable("Rechnungsposten");
  * 

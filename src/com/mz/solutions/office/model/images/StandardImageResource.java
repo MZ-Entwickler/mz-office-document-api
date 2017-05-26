@@ -29,10 +29,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- *
- * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
- */
 abstract class StandardImageResource implements ImageResource {
     
     static final int BUFFER_WRITE_SIZE = 16 * 1024;

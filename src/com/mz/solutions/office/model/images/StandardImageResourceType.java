@@ -22,7 +22,8 @@
 package com.mz.solutions.office.model.images;
 
 /**
- *
+ * Standard Bild-Formate die von beiden Office-Implementierungen unterstützt werden.
+ * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public enum StandardImageResourceType implements ImageResourceType {
@@ -45,16 +46,25 @@ public enum StandardImageResourceType implements ImageResourceType {
         this.fileNameExtensions = fileNameExtensions;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getFileTypeName() {
         return description;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getMimeType() {
         return mimeType;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String[] getFileNameExtensions() {
         return fileNameExtensions;
