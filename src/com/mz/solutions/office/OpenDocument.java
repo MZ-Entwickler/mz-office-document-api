@@ -37,6 +37,8 @@ import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.images.ImageValue;
 import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -539,8 +541,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             return;
         }
         
-        final String newHeight = String.format("%.4f", imageValue.getHeight()) + "mm";
-        final String newWidth = String.format("%.4f", imageValue.getWidth()) + "mm";
+        final String newHeight = formatLength(imageValue.getHeight()) + "mm";
+        final String newWidth = formatLength(imageValue.getWidth()) + "mm";
         
         drawFrame.setAttribute("svg:height", newHeight);
         drawFrame.setAttribute("svg:width", newWidth);
@@ -655,6 +657,12 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         manifestFileEntry.setAttribute("manifest:media-type", mimeType);
         manifestFileEntry.setAttribute("manifest:full-path", resourcePath);
         return manifestFileEntry;
+    }
+    
+    private String formatLength(double length) {
+        return BigDecimal.valueOf(length)
+                .setScale(4, RoundingMode.CEILING)
+                .toPlainString();
     }
     
     ////////////////////////////////////////////////////////////////////////////////////////////////

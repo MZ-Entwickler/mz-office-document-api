@@ -42,6 +42,8 @@ import com.mz.solutions.office.model.images.ImageValue;
 import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.images.UnitOfLength;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -1322,8 +1324,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             return;
         }
         
-        final String imageWidth = String.format("%.4f", imgValue.getWidth()) + "mm";
-        final String imageHeight = String.format("%.4f", imgValue.getHeight()) + "mm";
+        final String imageWidth = formatLength(imgValue.getWidth()) + "mm";
+        final String imageHeight = formatLength(imgValue.getHeight()) + "mm";
         
         final String styleWidthToken = "width:" + imageWidth;
         final String styleHeightToken = "height:" + imageHeight;
@@ -1461,6 +1463,12 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         } else {
             rootTypesElement.insertBefore(newMimeType, rootTypesElement.getFirstChild());
         }
+    }
+    
+    private String formatLength(double length) {
+        return BigDecimal.valueOf(length)
+                .setScale(4, RoundingMode.CEILING)
+                .toPlainString();
     }
     
     ////////////////////////////////////////////////////////////////////////////
