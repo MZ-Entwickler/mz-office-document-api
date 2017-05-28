@@ -21,6 +21,7 @@
  */
 package com.mz.solutions.office;
 
+import com.mz.solutions.office.instruction.DocumentProcessingInstruction;
 import com.mz.solutions.office.extension.Extension;
 import com.mz.solutions.office.extension.MicrosoftCustomXml;
 import com.mz.solutions.office.model.DataPage;
@@ -55,6 +56,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class OfficeDocument {
     
+    /** Leer-Array wenn keine weiteren Dokumenten-Prozess-Anwensungen vorliegen. */
+    protected static final DocumentProcessingInstruction[] NO_INSTRUCTIONS =
+            new DocumentProcessingInstruction[0];
+    
     OfficeDocument() { }
     
     /**
@@ -78,6 +83,10 @@ public abstract class OfficeDocument {
      * 
      * @param dataPages     Daten-Modell-Iterator
      * 
+     * @param instructions  Dokumenten-Anweisungen die bei der Verarbeitung berücksichtigt werden
+     *                      sollen, soweit unterstützt. Nicht unterstützte Anwensungen werden von
+     *                      der Implementierung ignoriert.
+     * 
      * @return              Erzeugtes Dokument als {@code byte[]}-Array
      * 
      * @throws  IOException
@@ -87,9 +96,57 @@ public abstract class OfficeDocument {
      *          Für Fehler die nicht IO basiert sind, sondern entweder im
      *          Konflikt mit der Konfiguration stehen oder dem Daten-Modell.
      */
-    protected abstract byte[] generate(Iterator<DataPage> dataPages)
+    protected abstract byte[] generate(
+            final Iterator<DataPage> dataPages,
+            final DocumentProcessingInstruction ... instructions)
             throws IOException, OfficeDocumentException;
 
+    /**
+     * Ersetzt alle Platzhalter in diesem Dokument und übergibt dies der
+     * Ausgabeimplementierung.
+     * 
+     * <p>Alle übergebenen {@link DataPage}'s werden in dieses Dokument
+     * eingesetzt bis der Iterator am Ende ist. Bei einem leeren Iterator ist
+     * das Verhalten von der Konfiguration der Factory abhängig. Der Zustand
+     * {@code null} wird bei keinem Argument angenommen. Ob mehrere
+     * {@link DataPage}'s auch zu mehreren Seiten im Dokument führen ist
+     * abhängig der Formatierung des Dokumentes und der Konfiguration der
+     * Factory.</p>
+     * 
+     * @param dataPages     Menge aller Datensätze
+     * 
+     * @param docResult     Ausgabeimplementierung der das fertig generierte
+     *                      Dokument übergeben wird
+     * 
+     * @param instructions  Dokumenten-Anweisungen die bei der Verarbeitung berücksichtigt werden
+     *                      sollen, soweit unterstützt. Nicht unterstützte Anwensungen werden von
+     *                      der Implementierung ignoriert.
+     * 
+     * @throws  UncheckedIOException
+     *          Sollte beim Schreibvorgang durch {@code docResult} ein IO Fehler
+     *          auftreten, wird dies als {@code unchecked} Exception
+     *          weiter gereicht.
+     * 
+     * @throws  OfficeDocumentException 
+     *          Tritt auf wenn Fehler beim Ersetzungsvorgang oder der Erstellung
+     *          nicht anhand der Konfiguration behoben werden können.
+     */
+    public void generate(
+            Iterator<DataPage> dataPages, Result docResult,
+            DocumentProcessingInstruction ... instructions)
+            throws UncheckedIOException, OfficeDocumentException
+    {
+        Objects.requireNonNull(docResult, "docResult");
+        Objects.requireNonNull(dataPages, "dataPages");
+        
+        try {
+            docResult.writeResult(generate(dataPages, instructions));
+            
+        } catch (IOException ioe) {
+            throw new UncheckedIOException(ioe);
+        }
+    }
+ 
     /**
      * Ersetzt alle Platzhalter in diesem Dokument und übergibt dies der
      * Ausgabeimplementierung.
@@ -117,17 +174,32 @@ public abstract class OfficeDocument {
      *          nicht anhand der Konfiguration behoben werden können.
      */
     public void generate(Iterator<DataPage> dataPages, Result docResult)
-            throws UncheckedIOException, OfficeDocumentException {
-
-        Objects.requireNonNull(docResult, "docResult");
+            throws UncheckedIOException, OfficeDocumentException
+    {
+        generate(dataPages, docResult, NO_INSTRUCTIONS);
+    }
+    
+    /**
+     * Ersetzt alle Platzhalter in diesem Dokument und übergibt dies der
+     * Ausgabeimplementierung.
+     * 
+     * <p>Siehe {@link #generate(Iterator, Result)}</p>
+     * 
+     * @param dataPages     Menge aller Datensätze
+     * 
+     * @param docResult     Ausgabeimplementierung
+     * 
+     * @param instructions  Dokumenten-Anweisungen die bei der Verarbeitung berücksichtigt werden
+     *                      sollen, soweit unterstützt. Nicht unterstützte Anwensungen werden von
+     *                      der Implementierung ignoriert.
+     */
+    public void generate(
+            Iterable<DataPage> dataPages, Result docResult,
+            DocumentProcessingInstruction ... instructions)
+            throws UncheckedIOException, OfficeDocumentException
+    {
         Objects.requireNonNull(dataPages, "dataPages");
-        
-        try {
-            docResult.writeResult(generate(dataPages));
-            
-        } catch (IOException ioe) {
-            throw new UncheckedIOException(ioe);
-        }
+        generate(dataPages.iterator(), docResult, instructions);
     }
     
     /**
@@ -141,11 +213,33 @@ public abstract class OfficeDocument {
      * @param docResult     Ausgabeimplementierung
      */
     public void generate(Iterable<DataPage> dataPages, Result docResult)
-            throws UncheckedIOException, OfficeDocumentException {
-
+            throws UncheckedIOException, OfficeDocumentException
+    {
         Objects.requireNonNull(dataPages, "dataPages");
-        
-        generate(dataPages.iterator(), docResult);
+        generate(dataPages, docResult, NO_INSTRUCTIONS);
+    }
+    
+    /**
+     * Ersetzt alle Platzhalter in diesem Dokument und übergibt dies der
+     * Ausgabeimplementierung.
+     * 
+     * <p>Siehe {@link #generate(Iterator, Result)}</p>
+     * 
+     * @param dataPage      Menge aller Datensätze
+     * 
+     * @param docResult     Ausgabeimplementierung
+     * 
+     * @param instructions  Dokumenten-Anweisungen die bei der Verarbeitung berücksichtigt werden
+     *                      sollen, soweit unterstützt. Nicht unterstützte Anwensungen werden von
+     *                      der Implementierung ignoriert.
+     */
+    public void generate(
+            DataPage dataPage, Result docResult,
+            DocumentProcessingInstruction ... instructions)
+            throws UncheckedIOException, OfficeDocumentException
+    {
+        Objects.requireNonNull(dataPage, "dataPage");
+        generate(Collections.singleton(dataPage).iterator(), docResult, instructions);
     }
     
     /**
@@ -159,18 +253,40 @@ public abstract class OfficeDocument {
      * @param docResult     Ausgabeimplementierung
      */
     public void generate(DataPage dataPage, Result docResult)
-            throws UncheckedIOException, OfficeDocumentException {
-
+            throws UncheckedIOException, OfficeDocumentException
+    {
         Objects.requireNonNull(dataPage, "dataPage");
-        
-        generate(Collections.singleton(dataPage).iterator(), docResult);
+        generate(dataPage, docResult, NO_INSTRUCTIONS);
     }
     
     /**
      * Generiert ein Dokument und übergibt dies der Ausgabeimplementierung, ohne
      * ein vorheriges Daten-Modell für den Ersetzungsvorgang anzuwenden.
      * 
-     * <p>Diese Methode verhält sich identisch zu {@link #generate(Iterator)}
+     * <p>Diese Methode verhält sich identisch zu {@link #generate(Iterator, Result)}
+     * mit dem Unterschied, das kein Daten-Modell übergeben wird. Werden
+     * Erweiterungen von diesem Dokument genutzt, dann sollte diese Methode zur
+     * Generierung der Nachricht verwendet werden. Ob die verwendete Erweiterung
+     * mit einer Übergabe eines Daten-Modells gleichzeitig verwendet werden kann
+     * ist unbestimmt.</p>
+     * 
+     * @param docResult     Ausgabeimplementierung
+     * 
+     * @param instructions  Dokumenten-Anweisungen die bei der Verarbeitung berücksichtigt werden
+     *                      sollen, soweit unterstützt. Nicht unterstützte Anwensungen werden von
+     *                      der Implementierung ignoriert.
+     */
+    public void generate(Result docResult, DocumentProcessingInstruction ... instructions)
+            throws UncheckedIOException, OfficeDocumentException {
+        
+        generate(new DataPage(), docResult, instructions);
+    }
+    
+    /**
+     * Generiert ein Dokument und übergibt dies der Ausgabeimplementierung, ohne
+     * ein vorheriges Daten-Modell für den Ersetzungsvorgang anzuwenden.
+     * 
+     * <p>Diese Methode verhält sich identisch zu {@link #generate(Iterator, Result)}
      * mit dem Unterschied, das kein Daten-Modell übergeben wird. Werden
      * Erweiterungen von diesem Dokument genutzt, dann sollte diese Methode zur
      * Generierung der Nachricht verwendet werden. Ob die verwendete Erweiterung
@@ -179,10 +295,8 @@ public abstract class OfficeDocument {
      * 
      * @param docResult     Ausgabeimplementierung
      */
-    public void generate(Result docResult)
-            throws UncheckedIOException, OfficeDocumentException {
-        
-        generate(new DataPage(), docResult);
+    public void generate(Result docResult) throws UncheckedIOException, OfficeDocumentException {
+        generate(new DataPage(), docResult, NO_INSTRUCTIONS);
     }
     
     /**

@@ -23,8 +23,12 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.OfficeDocumentException.FailedDocumentGenerationException;
 import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForImplementation;
+import com.mz.solutions.office.instruction.DocumentInterceptor;
+import com.mz.solutions.office.instruction.DocumentInterceptorType;
+import com.mz.solutions.office.instruction.DocumentProcessingInstruction;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.io.ByteArrayInputStream;
@@ -34,9 +38,11 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
 import static java.util.Collections.disjoint;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -69,13 +75,11 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     protected final OfficeDocumentFactory myOfficeFactory;
     
     // Originale Daten - Sollten NICHT verändert werden!!
-    protected final ZIPDocumentFile sourceDocumentFile;
-    protected final Document sourceContent;
-    protected final Document sourceStyles;
+    private final ZIPDocumentFile sourceDocumentFile;
     
     // XML Factories
-    protected final DocumentBuilderFactory docBuilderFactory;
-    protected final DocumentBuilder docBuilder;
+    private final DocumentBuilderFactory docBuilderFactory;
+    private final DocumentBuilder docBuilder;
     
     {
         docBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -88,8 +92,8 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
-    protected final TransformerFactory transformerFactory;
-    protected final Transformer transformer;
+    private final TransformerFactory transformerFactory;
+    private final Transformer transformer;
     
     {
         transformerFactory = TransformerFactory.newInstance();
@@ -101,18 +105,17 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
-    public AbstractOfficeXmlDocument(
-            OfficeDocumentFactory myFactory, Path document,
-            String zipNameContent, String zipNameStyles) {
-        
+    private DocumentProcessingInstruction[] myInstructions = NO_INSTRUCTIONS;
+    private volatile BaseDocumentInterceptorContext documentInterceptorContext;
+
+    private volatile ZIPDocumentFile newDocumentFile;
+    private volatile Map<String, Document> documentParts;
+    
+    public AbstractOfficeXmlDocument(OfficeDocumentFactory myFactory, Path document) {
         this.myOfficeFactory = myFactory;
         
         try {
             this.sourceDocumentFile = new ZIPDocumentFile(document);
-
-            this.sourceContent = loadFileAsXml(zipNameContent);
-            this.sourceStyles = loadFileAsXml(zipNameStyles);
-            
         } catch (Exception errorWhileLoading) {
             throw new InvalidDocumentFormatForImplementation(
                     formatMessage(INVALID_DOC_FORMAT), errorWhileLoading);
@@ -124,7 +127,7 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return myOfficeFactory;
     }
     
-    protected final Document loadFileAsXml(String zipItemFilename) {
+    private Document loadFileAsXml(String zipItemFilename) {
         return bytesToXml(sourceDocumentFile.read(zipItemFilename));
     }
     
@@ -140,6 +143,68 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
+    protected final ZIPDocumentFile getNewDocumentFile() {
+        return newDocumentFile;
+    }
+    
+    protected final ZIPDocumentFile getSourceDocumentFile() {
+        return sourceDocumentFile;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DOCUMENT PARTS
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    protected final Document getDocumentPart(String partName) {
+        if (documentParts.containsKey(partName)) {
+            return documentParts.get(partName);
+        }
+        
+        final Document partDocument = loadFileAsXml(partName);
+        documentParts.put(partName, partDocument);
+        
+        return partDocument;
+    }
+    
+    private void writeChangedDocumentParts() {
+        for (String partName : documentParts.keySet()) {
+            final Document partDocument = documentParts.get(partName);
+            overwrite(partName, partDocument);
+        }
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DOCUMENT INTERCEPTORS
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    protected abstract String normalizePartName(String inputPartName);
+    
+    private void handleDocumentInterceptors(DocumentInterceptorType interceptorType, List<DataValueMap<?>> documentValues) {
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof DocumentInterceptor == false) continue;
+            
+            final DocumentInterceptor interceptor = (DocumentInterceptor) anyInstruction;
+            
+            if (interceptorType.equals(interceptor.getInterceptorType())) {
+                runDocumentInterceptor(interceptor, documentValues);
+            }
+        }
+    }
+    
+    private void runDocumentInterceptor(DocumentInterceptor interceptor, List<DataValueMap<?>> documentValues) {
+        final String partName = normalizePartName(interceptor.getPartName());
+        final Document partDocument = getDocumentPart(partName);
+        final Element bodyNode = partDocument.getDocumentElement();
+        
+        this.documentInterceptorContext.setInterceptor(interceptor);
+        this.documentInterceptorContext.setXmlFields(partDocument, bodyNode);
+        this.documentInterceptorContext.setDocumentValues(documentValues);
+        
+        interceptor.callInterceptor(documentInterceptorContext);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     private String getSafeImplementationName() {
         final String name = getImplementedOfficeName();
         
@@ -153,10 +218,8 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     
     protected abstract String getImplementedOfficeName();
     
-    protected final void overwrite(ZIPDocumentFile destination,
-            String filename, Node domRootNode) {
-        
-        destination.overwrite(filename, xmlToBytes(domRootNode));
+    protected final void overwrite(String filename, Node domRootNode) {
+        getNewDocumentFile().overwrite(filename, xmlToBytes(domRootNode));
     }
     
     protected final byte[] xmlToBytes(Node domRootNode) {
@@ -179,19 +242,72 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     }
     
     @Override
-    protected byte[] generate(Iterator<DataPage> dataPages)
-            throws IOException, OfficeDocumentException {
-        
-        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+    protected byte[] generate(
+            final Iterator<DataPage> dataPages,
+            final DocumentProcessingInstruction ... instructions)
+            throws IOException, OfficeDocumentException
+    {
+        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream(128 * 1024);
 
-        createAndFillDocument(dataPages).writeTo(byteOut);
+        this.newDocumentFile = sourceDocumentFile.cloneDocument();
+        
+        this.documentInterceptorContext = new BaseDocumentInterceptorContext(this);
+        this.documentParts = new HashMap<>();
+        
+        final List<DataValueMap<?>> documentValues = toDataValueMap(dataPages);
+
+        try {
+            this.myInstructions = checkInstructions(instructions);
+            
+            handleDocumentInterceptors(DocumentInterceptorType.BEFORE_GENERATION, documentValues);
+            
+            createAndFillDocument((Iterator) documentValues.iterator());
+            
+            handleDocumentInterceptors(DocumentInterceptorType.AFTER_GENERATION, documentValues);
+            
+            writeChangedDocumentParts();
+            
+            this.newDocumentFile.writeTo(byteOut);
+        } finally {
+            this.myInstructions = NO_INSTRUCTIONS;
+            this.documentInterceptorContext = null;
+            this.documentParts = null;
+            this.newDocumentFile = null;
+        }
         
         return byteOut.toByteArray();
     }
-
     
-    protected abstract ZIPDocumentFile createAndFillDocument(
-            final Iterator<DataPage> dataPages);
+    private List<DataValueMap<?>> toDataValueMap(Iterator<DataPage> dataPageIterator) {
+        final List<DataValueMap<?>> resultList = new LinkedList<>();
+        dataPageIterator.forEachRemaining(resultList::add);
+        return resultList;
+    }
+    
+    private DocumentProcessingInstruction[] checkInstructions(
+            DocumentProcessingInstruction[] instructions)
+    {
+        if (null == instructions) return NO_INSTRUCTIONS;
+        if (instructions.length == 0) return instructions;
+        
+        for (int instrIndex = 0; instrIndex < instructions.length; instrIndex++) {
+            if (null == instructions[instrIndex]) {
+                throw new NullPointerException("instructions[@index = " + instrIndex + "]");
+            }
+        }
+        
+        return instructions;
+    }
+
+    protected final DocumentProcessingInstruction[] listInstructions() {
+        return this.myInstructions;
+    }
+    
+    protected final boolean hasInstructions() {
+        return listInstructions().length > 0;
+    }
+    
+    protected abstract void createAndFillDocument(Iterator<DataPage> dataPages);
     
     /**
      * Nimmt den übergebenen MIME-Type an und versucht zu diesem einen passenden zu finden aus der

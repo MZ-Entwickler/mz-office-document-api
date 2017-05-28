@@ -27,6 +27,7 @@ import com.mz.solutions.office.extension.ExtendedValue;
 import com.mz.solutions.office.extension.Extension;
 import com.mz.solutions.office.extension.MicrosoftCustomXml;
 import com.mz.solutions.office.extension.MicrosoftInsertDoc;
+import com.mz.solutions.office.instruction.DocumentInterceptor;
 import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataTable;
@@ -92,18 +93,12 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     /** Interceptor-Context für Lazy-Callbacks, wird bei jedem Platzhaler neu initialisiert. */
     private MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
-    private final Document sourceRelationships;
-    private final Document sourceContentTypes;
-    
     /** Zählt die Anzahl der eingefügten Bilder; muss vor Ersetzungsvorgang zurückgesetzt werden. */
     private volatile int imageCounter = 0;
     private volatile Map<ImageResource, Object[]> cacheImageResources = new IdentityHashMap<>();
-
+    
     public MicrosoftDocument(OfficeDocumentFactory factory, Path document) {
-        super(factory, document, ZIP_DOC_DOCUMENT, ZIP_DOC_STYLES);
-        
-        this.sourceRelationships = loadFileAsXml(ZIP_REL_RELS);
-        this.sourceContentTypes = loadFileAsXml(ZIP_CONTENT_TYPES);
+        super(factory, document);
     }
 
     @Override
@@ -160,30 +155,22 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     }
 
     @Override
-    protected ZIPDocumentFile createAndFillDocument(
-            final Iterator<DataPage> dataPages) {
-        
-        final ZIPDocumentFile newFile = sourceDocumentFile.cloneDocument();
-        
-        fillDocuments(dataPages, newFile);
-        
-        return newFile;
+    protected void createAndFillDocument(Iterator<DataPage> dataPages) {
+        fillDocuments(dataPages);
     }
     
-    private void fillDocuments(
-            final Iterator<DataPage> dataPages,
-            final ZIPDocumentFile outputDocument) {
+    private void fillDocuments(Iterator<DataPage> dataPages) {
         
         this.imageCounter = 16_000;
         this.cacheImageResources.clear();
         
-        final Document newContent = (Document) sourceContent.cloneNode(true);
-        final Document newStyles = (Document) sourceStyles.cloneNode(true);
+        final Document newContent = (Document) getDocumentPart(ZIP_DOC_DOCUMENT);
+        final Document newStyles = (Document) getDocumentPart(ZIP_DOC_STYLES);
         
-        final Document newRelationships = (Document) sourceRelationships.cloneNode(true);
-        final Document newContentTypes = (Document) sourceContentTypes.cloneNode(true);
+        final Document newRelationships = (Document) getDocumentPart(ZIP_REL_RELS);
+        final Document newContentTypes = (Document) getDocumentPart(ZIP_CONTENT_TYPES);
         
-        extAltChunk.setCurrentZipFile(outputDocument)
+        extAltChunk.setCurrentZipFile(getNewDocumentFile())
                 .setRelationshipDocument(newRelationships)
                 .setWordDocument(newContent)
                 .setContentTypesDocument(newContentTypes);
@@ -250,20 +237,31 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         
         removeAllBookmarkTags(newContent);
         
-        overwrite(outputDocument, ZIP_DOC_DOCUMENT, newContent);
-        overwrite(outputDocument, ZIP_DOC_STYLES, newStyles);
-        
-        overwrite(outputDocument, ZIP_REL_RELS, newRelationships);
-        overwrite(outputDocument, ZIP_CONTENT_TYPES, newContentTypes);
-        
         //// EXTENSIONS DURCHLAUFEN LASSEN
         
         if (null != extCustomXml) {
             assert extCustomXml instanceof ZippedCustomXmlExtension;
             ((ZippedCustomXmlExtension)extCustomXml)
-                    .applyCustomXmlData(outputDocument);
+                    .applyCustomXmlData(getNewDocumentFile());
         }
     }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    @Override
+    protected String normalizePartName(String inputPartName) {
+        if (DocumentInterceptor.GENERIC_PART_BODY.equals(inputPartName)) {
+            return ZIP_DOC_DOCUMENT;
+        }
+        
+        if (DocumentInterceptor.GENERIC_PART_STYLES.equals(inputPartName)) {
+            return ZIP_DOC_STYLES;
+        }
+        
+        return inputPartName;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     private void normalizeInstrTextFields(Node rootNode) {
         // Alle Field-Chars suchen (somit Begin & End)
@@ -1539,7 +1537,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
                 .noRecursionByElements("w:tbl")
                 .doSkipFirstStopElement();
     }
-    
+
     
     ////////////////////////////////////////////////////////////////////////////
     // IMPLEMENTIERUNG DER MICROSOFT CUSTOM XML ERWEITERUNG
@@ -1564,7 +1562,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         }
         
         private String[] detectPartNames() {
-            return sourceDocumentFile
+            return getSourceDocumentFile()
                     .findItemsStartingWith("customXml/item").stream()
                     .filter(name -> name.contains("itemProps") == false)
                     .filter(name -> name.endsWith(".xml"))
@@ -1606,7 +1604,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             
             // Das byte[]-Array aus der ZIP muss nicht geklont werden, da die
             // Rückgabe der ZIP bereits klont
-            return sourceDocumentFile.read(itemName);
+            return getSourceDocumentFile().read(itemName);
         }
 
         @Override

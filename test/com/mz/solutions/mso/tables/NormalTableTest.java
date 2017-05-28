@@ -28,6 +28,8 @@ import com.mz.solutions.office.model.DataTable;
 import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.result.ResultFactory;
+import java.io.ByteArrayOutputStream;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class NormalTableTest extends AbstractTableTest {
@@ -83,6 +85,52 @@ public class NormalTableTest extends AbstractTableTest {
     }
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    @Test
+    public void testFile_NormalTables_docx_Repeating() {
+        // Lädt eine Factory, und einmal das Dokument. Lässt es aber ZWEI mal ersetzen. Beide
+        // erzeugten Dokumente müssen byte-für-byte identisch sein. Es sollte möglichst keine
+        // Seiteneffekte geben.
+        
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(ROOT_IN.resolve("NormalTables.docx"));
+        
+        final ByteArrayOutputStream outFile1 = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outFile2 = new ByteArrayOutputStream();
+        
+        final DataPage dataPage = createDataPage();
+        
+        document.generate(dataPage, ResultFactory.toStream(outFile1));
+        document.generate(dataPage, ResultFactory.toStream(outFile2));
+        
+        final byte[] dataFile1 = outFile1.toByteArray();
+        final byte[] dataFile2 = outFile2.toByteArray();
+        
+        Assert.assertArrayEquals(dataFile1, dataFile2);
+    }
+    
+    @Test
+    public void testFile_NormalTables_odt_Repeating() {
+        // Lädt eine Factory, und einmal das Dokument. Lässt es aber ZWEI mal ersetzen. Beide
+        // erzeugten Dokumente müssen byte-für-byte identisch sein. Es sollte möglichst keine
+        // Seiteneffekte geben.
+        
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(ROOT_IN.resolve("NormalTables.odt"));
+        
+        final ByteArrayOutputStream outFile1 = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outFile2 = new ByteArrayOutputStream();
+        
+        final DataPage dataPage = createDataPage();
+        
+        document.generate(dataPage, ResultFactory.toStream(outFile1));
+        document.generate(dataPage, ResultFactory.toStream(outFile2));
+        
+        final byte[] dataFile1 = outFile1.toByteArray();
+        final byte[] dataFile2 = outFile2.toByteArray();
+        
+        Assert.assertArrayEquals(dataFile1, dataFile2);
+    }
     
     @Test
     public void testFile_NormalTables_docx() {

@@ -24,6 +24,7 @@ package com.mz.solutions.office;
 import com.mz.solutions.office.OfficeDocumentException.DocumentPlaceholderMissingException;
 import com.mz.solutions.office.OfficeDocumentException.NoDataForDocumentGenerationException;
 import com.mz.solutions.office.extension.ExtendedValue;
+import com.mz.solutions.office.instruction.DocumentInterceptor;
 import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataTable;
@@ -48,7 +49,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import static mz.solutions.office.resources.OpenDocumentKeys.NO_DATA;
 import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_FORMATTING_CHAR;
@@ -66,60 +66,35 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     
     private final MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
-    private final Document sourceManifest;
-    
-    private volatile Document newManifest;
-    private volatile Document newContent;
-    private volatile Document newStyles;
-    
-    private volatile ZIPDocumentFile newDocumentFile;
-    
     private volatile int imageCounter = 16_000;
     private volatile Map<ImageResource, String> cacheImageResources = new IdentityHashMap<>();
     
     public OpenDocument(OfficeDocumentFactory factory, Path document) {
-        super(factory, document, ZIP_DOC_CONTENT, ZIP_DOC_STYLES);
-        
-        try {
-            this.sourceManifest = loadFileAsXml(ZIP_MANIFEST);
-        } catch (Exception errorWhileLoading) {
-            throw new OfficeDocumentException.InvalidDocumentFormatForImplementation(
-                    formatMessage(INVALID_DOC_FORMAT), errorWhileLoading);
-        }
+        super(factory, document);
     }
 
     @Override
     protected String getImplementedOfficeName() {
         return "Apache OpenOffice 4.x / LibreOffice";
     }
-
     
     @Override
-    protected ZIPDocumentFile createAndFillDocument(
-            final Iterator<DataPage> dataPages) {
-        
-        this.newDocumentFile = sourceDocumentFile.cloneDocument();
+    protected void createAndFillDocument(Iterator<DataPage> dataPages) {
         this.imageCounter = 16_000;
         this.cacheImageResources.clear();
         
         try {
             fillDocuments0(dataPages);
-            return newDocumentFile;
         } finally {
             this.cacheImageResources.clear();
-            this.newContent = this.newStyles = this.newManifest = null;
-            this.newDocumentFile = null;
         }
     }
     
-    private void fillDocuments0(final Iterator<DataPage> dataPages) {
-        this.newContent = (Document) sourceContent.cloneNode(true);
-        this.newStyles = (Document) sourceStyles.cloneNode(true);
-        this.newManifest = (Document) sourceManifest.cloneNode(true);
+    private void fillDocuments0(final Iterator<DataPage> dataPageIterator) {
+        final Document documentContent = getDocumentPart(ZIP_DOC_CONTENT);
+        removeUserFieldDeclaration(documentContent);
         
-        removeUserFieldDeclaration(newContent);
-        
-        final Node nodeContentBody = findDocumentBody(newContent);
+        final Node nodeContentBody = findDocumentBody(documentContent);
         
         // Leeren Content-Body um alle Datensätze anfügen zu können
         final Node newFullContentBody = nodeContentBody.cloneNode(true);
@@ -131,8 +106,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         
         boolean missingDataPages = true;
         
-        while (dataPages.hasNext()) {
-            final DataPage nextPage = dataPages.next();
+        while (dataPageIterator.hasNext()) {
+            final DataPage nextPage = dataPageIterator.next();
             final Node newContentBody = nodeContentBody.cloneNode(true);
             
             replaceDocumentTree(newContentBody, nextPage);
@@ -159,11 +134,28 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         // Gefüllten Body-Node tauschen mit ursprünglichem Bode-Node
         final Node parentNode = nodeContentBody.getParentNode();
         parentNode.replaceChild(newFullContentBody, nodeContentBody);
-
-        overwrite(newDocumentFile, ZIP_DOC_CONTENT, newContent);
-        overwrite(newDocumentFile, ZIP_DOC_STYLES, newStyles);
-        overwrite(newDocumentFile, ZIP_MANIFEST, newManifest);
     }
+    
+    private Document getDocumentManifest() {
+        return getDocumentPart(ZIP_MANIFEST);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    @Override
+    protected String normalizePartName(String inputPartName) {
+        if (DocumentInterceptor.GENERIC_PART_BODY.equals(inputPartName)) {
+            return ZIP_DOC_CONTENT;
+        }
+        
+        if (DocumentInterceptor.GENERIC_PART_STYLES.equals(inputPartName)) {
+            return ZIP_DOC_STYLES;
+        }
+        
+        return inputPartName;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     private void removeUserFieldDeclaration(Node documentRoot) {
         final Node textUserFieldDecls =  findUserFieldDeclaration(documentRoot);
@@ -436,7 +428,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private void replaceUserFieldWithDrawFrame(Node userFieldNode, ImageValue imageValue) {
-        final Element newDrawFrame = createDrawFrameElement();
+        final Element newDrawFrame = createDrawFrameElement(userFieldNode.getOwnerDocument());
         final Element oldUserField = (Element) userFieldNode;
         
         oldUserField.getParentNode().replaceChild(newDrawFrame, oldUserField);
@@ -486,13 +478,16 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             // Style-ID vergeben und registrieren
             drawFrame.setAttribute("draw:style-name", attrDrawStyleName);
             
-            final NodeList nodeList = newContent.getElementsByTagName("office:automatic-styles");
+            final NodeList nodeList = drawFrame.getOwnerDocument()
+                    .getElementsByTagName("office:automatic-styles");
+            
             if (nodeList.getLength() == 0) {
                 throw new IllegalStateException("Format error - no office:automatic-styles");
             }
             
             final Element officeAutomaticStyles = (Element) nodeList.item(0);
-            officeAutomaticStyles.appendChild(createGraphicsStyleElement(attrDrawStyleName));
+            officeAutomaticStyles.appendChild(createGraphicsStyleElement(
+                    drawFrame.getOwnerDocument(), attrDrawStyleName));
         }
         
         overwriteDrawFrameLink(drawFrame, imagePath);
@@ -519,13 +514,13 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         if (null != svgDesc) drawFrame.removeChild(svgDesc);
         
         if (null != nwTextSvgTitle && nwTextSvgTitle.isEmpty() == false) {
-            final Element nwSvgTitle = newContent.createElement("svg:title");
+            final Element nwSvgTitle = drawFrame.getOwnerDocument().createElement("svg:title");
             nwSvgTitle.setTextContent(nwTextSvgTitle);
             drawFrame.appendChild(nwSvgTitle);
         }
         
         if (null != nwTextSvgDesc && nwTextSvgDesc.isEmpty() == false) {
-            final Element nwSvgDesc = newContent.createElement("svg:desc");
+            final Element nwSvgDesc = drawFrame.getOwnerDocument().createElement("svg:desc");
             nwSvgDesc.setTextContent(nwTextSvgDesc);
             drawFrame.appendChild(nwSvgDesc);
         }
@@ -548,8 +543,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         drawFrame.setAttribute("svg:width", newWidth);
     }
     
-    private Element createDrawFrameElement() {
-        final Element drawFrame = newContent.createElement("draw:frame");
+    private Element createDrawFrameElement(Document document) {
+        final Element drawFrame = document.createElement("draw:frame");
         drawFrame.setAttribute("draw:name", "");                // überschreiben
         drawFrame.setAttribute("svg:height", "");               // überschreiben
         drawFrame.setAttribute("svg:width", "");                // überschreiben
@@ -558,7 +553,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         drawFrame.setAttribute("style:rel-width", "scale");
         drawFrame.setAttribute("text:anchor-type", "as-char");
         
-        final Element drawImage = (Element) drawFrame.appendChild(newContent.createElement("draw:image"));
+        final Element drawImage = (Element) drawFrame.appendChild(document.createElement("draw:image"));
         drawImage.setAttribute("xlink:actuate", "onLoad");
         drawImage.setAttribute("xlink:show", "embed");
         drawImage.setAttribute("xlink:type", "simple");
@@ -567,14 +562,14 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         return drawFrame;
     }
     
-    private Element createGraphicsStyleElement(String styleId) {
-        final Element styleStyle = newContent.createElement("style:style");
+    private Element createGraphicsStyleElement(Document document, String styleId) {
+        final Element styleStyle = document.createElement("style:style");
         styleStyle.setAttribute("style:name", styleId);
         styleStyle.setAttribute("style:family", "graphic");
         styleStyle.setAttribute("style:parent-style-name", "Graphics");
         
         final Element styleGraphicProperties = (Element) styleStyle.appendChild(
-                newContent.createElement("style:graphic-properties"));
+                document.createElement("style:graphic-properties"));
         
         styleGraphicProperties.setAttribute("fo:background-color", "transparent");
         styleGraphicProperties.setAttribute("fo:border", "none");
@@ -628,7 +623,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 + (UUID.randomUUID().toString().replace("-", "") + ".")
                 + mimeType.getFileNameExtensions()[0];
         
-        final NodeList manifestNodeList = newManifest.getElementsByTagName("manifest:manifest");
+        final NodeList manifestNodeList = getDocumentManifest().getElementsByTagName("manifest:manifest");
         if (manifestNodeList.getLength() == 0) {
             throw new IllegalStateException("Internal - no manifest root element found");
         }
@@ -643,8 +638,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         manifest.appendChild(manifestFileEntry);
         
         // Zum Pfad die Bild-Resource einbinden
-        newDocumentFile.createNewFileInZip(imagePath);
-        newDocumentFile.overwrite(imagePath, Objects.requireNonNull(
+        getNewDocumentFile().createNewFileInZip(imagePath);
+        getNewDocumentFile().overwrite(imagePath, Objects.requireNonNull(
                 imageResource.loadImageData(), "ImageResource#loadData() == null"));
         
         this.cacheImageResources.put(imageResource, imagePath);
@@ -653,7 +648,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private Element createManifestFileEntryElement(String mimeType, String resourcePath) {
-        final Element manifestFileEntry = newManifest.createElement("manifest:file-entry");
+        final Element manifestFileEntry = getDocumentManifest().createElement("manifest:file-entry");
         manifestFileEntry.setAttribute("manifest:media-type", mimeType);
         manifestFileEntry.setAttribute("manifest:full-path", resourcePath);
         return manifestFileEntry;
@@ -703,7 +698,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         return new GenericNodeIterator(rootNode, "draw:frame")
                 .noRecursionByElements("table:table");
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // INTERCEPTION CONTEXT FÜR DIE VERWENDUNG VON VALUE-INTERCEPTOR'S
     ////////////////////////////////////////////////////////////////////////////////////////////////
