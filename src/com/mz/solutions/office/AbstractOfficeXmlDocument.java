@@ -26,6 +26,8 @@ import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForI
 import com.mz.solutions.office.instruction.DocumentInterceptor;
 import com.mz.solutions.office.instruction.DocumentInterceptorType;
 import com.mz.solutions.office.instruction.DocumentProcessingInstruction;
+import com.mz.solutions.office.instruction.HeaderFooterInstruction;
+import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
@@ -107,6 +109,7 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     
     private DocumentProcessingInstruction[] myInstructions = NO_INSTRUCTIONS;
     private volatile BaseDocumentInterceptorContext documentInterceptorContext;
+    private volatile BaseHeaderFooterContext headerFooterContext;
 
     private volatile ZIPDocumentFile newDocumentFile;
     private volatile Map<String, Document> documentParts;
@@ -252,6 +255,8 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         this.newDocumentFile = sourceDocumentFile.cloneDocument();
         
         this.documentInterceptorContext = new BaseDocumentInterceptorContext(this);
+        this.headerFooterContext = new BaseHeaderFooterContext(this);
+        
         this.documentParts = new HashMap<>();
         
         final List<DataValueMap<?>> documentValues = toDataValueMap(dataPages);
@@ -271,6 +276,7 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         } finally {
             this.myInstructions = NO_INSTRUCTIONS;
             this.documentInterceptorContext = null;
+            this.headerFooterContext = null;
             this.documentParts = null;
             this.newDocumentFile = null;
         }
@@ -351,6 +357,36 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return mimeType;
     }
     
+    protected final boolean hasHeaderFooterInstructions() {
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof HeaderFooterInstruction) return true;
+        }
+        return false;
+    }
+    
+    protected Optional<DataMap<?>> callHeaderFooterInstruction(String name, boolean header) {
+        name = (null == name ? "" : name);
+        
+        if (header) {
+            headerFooterContext.setupAsHeader(name);
+        } else {
+            headerFooterContext.setupAsFooter(name);
+        }
+        
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof HeaderFooterInstruction == false) continue;
+            
+            final HeaderFooterInstruction instruction = (HeaderFooterInstruction) anyInstruction;
+            final Optional<DataMap<?>> result = instruction.processHeaderFooter(headerFooterContext);
+            
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+        
+        return Optional.empty();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Methoden zum Abfragen der Standard-Einstellungen
     ////////////////////////////////////////////////////////////////////////////

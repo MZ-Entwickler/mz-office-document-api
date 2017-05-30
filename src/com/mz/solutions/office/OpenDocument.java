@@ -122,6 +122,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             missingDataPages = false;
         }
         
+        processHeaderFooter();
+        
         if (missingDataPages) {
             if (ignoreMissingDataPages()) {
                 return; // Leise beenden
@@ -138,6 +140,61 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     
     private Document getDocumentManifest() {
         return getDocumentPart(ZIP_MANIFEST);
+    }
+    
+    private void processHeaderFooter() {
+        if (hasHeaderFooterInstructions() == false) return;
+        
+        final Document stylesDocument = getDocumentPart(ZIP_DOC_STYLES);
+        final Optional<Element> officeMasterStyles = elementByTagName(
+                "office:master-styles", stylesDocument.getDocumentElement());
+        
+        if (officeMasterStyles.isPresent() == false) return;
+        
+        final NodeList headerElements = officeMasterStyles.get().getElementsByTagName("style:header");
+        final NodeList footerElements = officeMasterStyles.get().getElementsByTagName("style:footer");
+        
+        final String attrPageStyleName = officeMasterStyles.get().getAttribute("style:name");
+        final String attrPageLayoutName = officeMasterStyles.get().getAttribute("style:page-layout-name");
+        
+        for (int i = 0; i < headerElements.getLength(); i++) {
+            replaceHeaderFooterElement(
+                    (Element) headerElements.item(i), true /* header */,
+                    attrPageStyleName, attrPageLayoutName);
+        }
+        
+        for (int i = 0; i < footerElements.getLength(); i++) {
+            replaceHeaderFooterElement(
+                    (Element) footerElements.item(i), false /* header */,
+                    attrPageStyleName, attrPageLayoutName);
+        }
+    }
+    
+    private void replaceHeaderFooterElement(Element element, boolean header, String ... names) {
+        DataMap<?> values = null;
+        
+        for (String singleName : names) {
+            if (null == singleName) continue;
+            if (singleName.isEmpty()) continue;
+            
+            final Optional<DataMap<?>> opData = callHeaderFooterInstruction(singleName, header);
+            
+            if (null != opData && opData.isPresent()) {
+                values = opData.get();
+                break;
+            }
+        }
+        
+        if (null == values) {
+            Optional<DataMap<?>> opData = callHeaderFooterInstruction("", header);
+            if (null != opData && opData.isPresent()) {
+                values = opData.get();
+            }
+        }
+        
+        if (null == values) return; // Kein Ersetzungsvorgang
+        
+        replaceDocumentTree(element, values);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

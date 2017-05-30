@@ -28,6 +28,7 @@ import static com.mz.solutions.office.instruction.DocumentInterceptorType.BEFORE
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValueMap;
 import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -45,27 +46,62 @@ import javax.annotation.Nullable;
 public interface DocumentProcessingInstruction {
     
     public static HeaderFooterInstruction replaceHeaderFooterWith(DataPage values) {
-        return null;
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            return Optional.of(values);
+        };
     }
     
     public static HeaderFooterInstruction replaceHeaderFooterWith(String name, DataPage values) {
-        return null;
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            if (name.equalsIgnoreCase(headerFooterContext.getName())) {
+                return Optional.of(values);
+            } else {
+                return Optional.empty();
+            }
+        };
     }
     
     public static HeaderFooterInstruction replaceHeaderWith(DataPage values) {
-        return null;
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            return headerFooterContext.isHeader() ? Optional.of(values) : Optional.empty();
+        };
     }
     
     public static HeaderFooterInstruction replaceFooterWith(DataPage values) {
-        return null;
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            return headerFooterContext.isFooter() ? Optional.of(values) : Optional.empty();
+        };
     }
     
     public static HeaderFooterInstruction replaceHeaderWith(String headerName, DataPage values) {
-        return null;
+        Objects.requireNonNull(headerName, "headerName");
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            if (headerFooterContext.isFooter()) return Optional.empty();
+            if (headerName.equalsIgnoreCase(headerFooterContext.getName())) {
+                return Optional.of(values);
+            } else {
+                return Optional.empty();
+            }
+        };
     }
     
-    public static HeaderFooterInstruction replaceFooterWith(String headerName, DataPage values) {
-        return null;
+    public static HeaderFooterInstruction replaceFooterWith(String footerName, DataPage values) {
+        Objects.requireNonNull(footerName, "footerName");
+        Objects.requireNonNull(values, "values");
+        return headerFooterContext -> {
+            if (headerFooterContext.isHeader()) return Optional.empty();
+            if (footerName.equalsIgnoreCase(headerFooterContext.getName())) {
+                return Optional.of(values);
+            } else {
+                return Optional.empty();
+            }
+        };
     }
     
     ////////////////////////////////////////////////////////////////////////////////////////////////

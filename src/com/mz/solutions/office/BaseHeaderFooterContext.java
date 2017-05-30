@@ -19,35 +19,44 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.mz.solutions.office.instruction;
+package com.mz.solutions.office;
 
-/**
- * Kontext beim Ersetzungs-Vorgang für die Entscheidungsfindung zur Ersetzung von einer oder
- * mehreren Kopf- und Fußzeilen.
- * 
- * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
- */
-public interface HeaderFooterContext extends InstructionContext {
+import com.mz.solutions.office.instruction.HeaderFooterContext;
+
+final class BaseHeaderFooterContext extends BaseInstructionContext implements HeaderFooterContext {
+
+    private volatile boolean header, footer;
+    private volatile String name;
+
+    public BaseHeaderFooterContext(OfficeDocument document) {
+        super(document);
+    }
     
-    /**
-     * Prüfung ob es sich bei dieser Zeile um eine Kopfzeile handelt.
-     * 
-     * @return  {@code true}, wenn Kopfzeile
-     */
-    public boolean isHeader();
+    public void setupAsHeader(String headerName) {
+        this.header = true;
+        this.footer = false;
+        this.name = headerName;
+    }
     
-    /**
-     * Prüfung ob es sich bei dieser Zeile um eine Fußzeile handelt.
-     * 
-     * @return  {@code true}, wenn Fußzeile
-     */
-    public boolean isFooter();
+    public void setupAsFooter(String footerName) {
+        this.header = false;
+        this.footer = true;
+        this.name = footerName;
+    }
     
-    /**
-     * Rückgabe eines Namens oder Bezeichners der Kopf- oder Fußzeile.
-     * 
-     * @return  Bezeichner
-     */
-    public String getName();
+    @Override
+    public boolean isHeader() {
+        return header;
+    }
+
+    @Override
+    public boolean isFooter() {
+        return footer;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
     
 }
