@@ -1,3 +1,7 @@
+Sorry if you don't speak German. We've tried to keep some comments of our examples (GettingStarted,
+JUnit, JavaDoc and here) in English. Well... perhaps we will translate all documentation sometime.
+If you have questions, just write me. :-)
+
 # MZ Office Document API
 Bibliothek zum Ausfüllen von DOCX (Microsoft Word ab 2007) und ODT (Open-/LibrOffice) Dokumenten
 die Platzhalter oder Tabellen (auch ineinander verschachtelte Tabellen) beinhalten.
