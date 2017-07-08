@@ -17,7 +17,7 @@ Die Bibliothek ist unter den Bedingungen der Affero General Public License Versi
 frei verfügbar und verwendbar.
 
 ## Abhängigkeiten
-- _Runtime_: Es werden keine Abhängigkeiten zur Laufzeit benötigt/verwendet.
+- _Runtime_: Es werden keine Abhängigkeiten zur Laufzeit benötigt/verwendet. No depandancies at runtime needed.
 - _Compile_: JSR 305 (Annotations for Software Defect Detection). Die entsprechende JAR findet
   sich im _third-party_ Verzeichnis.
 - _Test_: JUnit 4.0 und hamcrest-core 1.0. Beides liegt im _third-party_ Verzeichnis vor.
