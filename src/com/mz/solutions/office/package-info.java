@@ -120,8 +120,9 @@
  * <i>Tabellenbezeichung</i> wird in OpenOffice direkt in den Eigenschaften
  * der Tabelle unter "Name" hinterlegt. Der Name muss in Großbuchstaben
  * eingetragen werden.<br><br>
- * <i>Kopf- und Fußzeilen</i> werden beim Ersetzungsvorgang nicht berücksichtigt
- * und sollten auch keine Platzhalter enthalten.<br><br>
+ * <i>Kopf- und Fußzeilen</i> werden beim normalen Ersetzungsvorgang nicht berücksichtigt.
+ * Mit Dokumenten-Anweisungen können Kopf- und Fußzeilen bei ODT Dokumenten ersetzt werden.
+ * Siehe dazu Abschnitt Dokumenten-Anweisungen.<br><br>
  * Es werden ODF Dateien ab Version 1.1 unterstützt; nicht zu verwechseln mit
  * der OpenOffice Versionummerierung.<br><br></p>
  * 

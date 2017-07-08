@@ -114,7 +114,7 @@ _Seitenumbrüche_ sind in OpenOffice nie hart-kodiert (im Gegensatz zu Microsoft
 
 _Tabellenbezeichung_ wird in OpenOffice direkt in den Eigenschaften der Tabelle unter "Name" hinterlegt. Der Name muss in Großbuchstaben eingetragen werden.
 
-_Kopf- und Fußzeilen_ werden beim Ersetzungsvorgang nicht berücksichtigt und sollten auch keine Platzhalter enthalten.
+_Kopf- und Fußzeilen_ werden beim normalen Ersetzungsvorgang nicht berücksichtigt. Mit Dokumenten-Anweisungen können Kopf- und Fußzeilen bei ODT Dokumenten ersetzt werden. Siehe dazu Abschnitt Dokumenten-Anweisungen.
 
 Es werden ODF Dateien ab Version 1.1 unterstützt; nicht zu verwechseln mit der OpenOffice Versionummerierung.
 
@@ -224,10 +224,59 @@ Ziel und Art der Speicherung können selbst implementiert werden, indem die Schn
  
 ```
 
+# Umgang mit dem Einsetzen/Ersetzen von Bildern in Dokumenten
+Bilder können in Vorlage-Dokumenten eingesetzt sowie durch andere ersetzt werden. Bei
+Text-Platzhaltern (MergeFields bei Microsoft, User-Def-Fields bei Libre/Openoffice), wird bei
+einem Bild-Wert `com.mz.solutions.office.model.images.ImageValue` an jene Stelle das
+als `com.mz.solutions.office.model.images.ImageResource` geladene Bild eingesetzt unter
+Verwendung der angegebenen Abmaße aus dem Bild-Wert.
 
+Bestehende Bilder können ersetzt/ausgetauscht werden und, wenn gewünscht, deren bestehenden
+Abmaße in der Vorlage mit eigenen überschrieben/ersetzt werden. Bild-Platzhalter, also in der
+Vorlage bereits existierende Bilder, werden als Platzhalter erkannt, wenn dem Bild in der
+Vorlage in den Eigenschaften (Titel, Name, Beschreibung, Alt-Text) ein bekannter Platzhalter
+mit Bild-Wert angegeben wurde. Genaueres ist den folgenden Klassen zu entnehmen:
 
+`com.mz.solutions.office.model.images.ImageResource`
+ Bild-Datei/-Resource (Bild als Byte-Array mit Angabe des Formates)
 
+ `com.mz.solutions.office.model.images.ImageValue`
+ Bild-Wert (Resource) mit weiteren Angaben wie Titel (optional), Beschreibung (optional)
+ und anzuwendende Abmaße.
 
+Ein Bild-Wert (`com.mz.solutions.office.model.images.ImageValue`) besitzt eine
+zugeordnete Bild-Resource (`com.mz.solutions.office.model.images.ImageResource`). Eine
+Bild-Resource kann mehrfach/gleichzeitig in mehreren Bild-Werten verwendet werden.
+Das Wiederverwenden von Bild-Resourcen führt zu deutlich kleineren Ergebnis-Dokumenten. Jene
+Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.
+
+```java
+ ImageResource imageData1 = ImageResource.loadImage(
+         Paths.get("image_1.png"), StandardImageResourceType.PNG);
+
+ ImageResource imageData2 = ImageResource.loadImage(
+         Paths.get("image_2.bmp"), StandardImageResourceType.BMP);
+
+ ImageValue image1Small = new ImageValue(imageData1)
+         .setDimension(0.5D, 0.5D, UnitOfLength.CENTIMETERS)     // default 3cm x 1cm
+         .setTitle("Image Title")                                // optional
+         .setDescription("Alternative Text Description");        // optional
+
+ ImageValue image1Large = new ImageValue(imageData1) // same image as image1Small (sharing res.)
+         .setDimension(15, 15, UnitOfLength.CENTIMETERS);
+
+ ImageValue image2 = new ImageValue(imageData2)
+         .setDimension(40, 15, UnitOfLength.MILLIMETERS)
+         .setOverrideDimension(true);
+
+ // Assigning ImageValue's to DataValue's
+ final DataPage page = new DataPage();
+
+ page.addValue(new DataValue("IMAGE_1_SMALL", image1Small));
+ page.addValue(new DataValue("IMAGE_1_LARGE", image1Large));
+ page.addValue(new DataValue("IMAGE_2", image2));
+ page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
+```
 
 
 
