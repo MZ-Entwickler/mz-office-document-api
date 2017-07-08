@@ -251,6 +251,8 @@ Das Wiederverwenden von Bild-Resourcen führt zu deutlich kleineren Ergebnis-Dok
 Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.
 
 ```java
+ // Create or load Image-Resources. Try to reuse resources to reduce the file size of the
+ // result documents. Internally image resources cache the file content.
  ImageResource imageData1 = ImageResource.loadImage(
          Paths.get("image_1.png"), StandardImageResourceType.PNG);
 
@@ -278,7 +280,60 @@ Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.
  page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
 ```
 
+# Dokument-Anweisungen mit `com.mz.solutions.office.instruction.DocumentProcessingInstruction` übergeben
+Dem Ersetzungs-Vorgang können weitere Anweisungen/Callbacks mit übergeben werden. Derzeit
+mögliche Anweisungen ist das Abfangen (oder gezielte Laden) von Dokumenten-Teilen (also XML
+Dateien im ZIP Container) und der Bearbeitung des XML-Baumes vor und/oder nach Ausführung des
+Ersetzungs-Vorganges.
 
+Bei LibreOffice/Apache-OpenOffice können dazu bei ODT Dateien die Kopf- und Fußzeilen im
+Ersetzungs-Prozess mit einbezogen werden.
+
+Alle Anweisungen können erstellt werden über die vereinfachten Factory-Methoden in
+`com.mz.solutions.office.instruction.DocumentProcessingInstruction` oder händisch durch
+Implementieren der jeweiligen Klassen.
+
+__Kopf- und Fußzeilen werden (derzeit) nur bei {@code ODT} Dokumente unterstützt.__
+```java
+ // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
+ final OfficeDocument anyDocument = ...
+
+ final DataPage documentData = ...
+ final DataPage headerData = ...     // Header und Footer replacement only for ODT-Files
+ final DataPage footerData = ...
+
+ anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
+         DocumentProcessingInstruction.replaceHeaderWith(headerData),
+         DocumentProcessingInstruction.replaceFooterWith(footerData));
+```
+
+___Document-Interceptors werden bei beiden Office-Implementierungen unterstützt.___
+```java
+ final DocumentInterceptorFunction interceptorFunction = ...
+ final DocumentInterceptorFunction changeCustomXml = (DocumentInterceptionContext context) -> {
+     final Document xmlDocument = context.getXmlDocument();
+     final NodeList styleNodes = xmlDocument.getElementsByTagName("custXml:customers");
+
+     // add/remove/change XML document
+     // 'context' should contain all data and access you will need
+ };
+
+ anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
+         // Intercept main document part (document body)
+         DocumentProcessingInstruction.interceptDocumentBody(
+                 DocumentInterceptorType.BEFORE_GENERATION,  // invoke interceptor before
+                 interceptorFunction, // change low level document function (Callback-Method)
+                 dataMapForInterceptorFunctionHere), // data is optional
+         // Intercept styles part of this document, maybe to change font-scaling afterwards
+         DocumentProcessingInstruction.interceptDocumentStylesAfter(
+                 interceptorFunction), // no data for this callback function
+         // let us change the Custom XML Document Part (only MS Word) und fill with our data
+         DocumentProcessingInstruction.interceptXmlDocumentPart(
+                 "word/custom/custPropItem.xml", // our Custom XML data
+                 DocumentInterceptorType.AFTER_GENERATION, // before or after doesn't matter
+                 changeCustomXml));
+         
+```
 
 
 
