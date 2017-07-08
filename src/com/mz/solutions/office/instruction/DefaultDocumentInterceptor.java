@@ -26,6 +26,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Interne Standard-Implementierung für die Factory-Methoden.
+ * 
+ * @author Riebe, Moritz      (moritz.riebe@mz-solutions.de)
+ */
 final class DefaultDocumentInterceptor implements DocumentInterceptor {
 
     private final String partName;
