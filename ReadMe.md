@@ -280,7 +280,7 @@ Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.
  page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
 ```
 
-# Dokument-Anweisungen mit `com.mz.solutions.office.instruction.DocumentProcessingInstruction` übergeben
+# Dokument-Anweisungen mit `DocumentProcessingInstruction` übergeben
 Dem Ersetzungs-Vorgang können weitere Anweisungen/Callbacks mit übergeben werden. Derzeit
 mögliche Anweisungen ist das Abfangen (oder gezielte Laden) von Dokumenten-Teilen (also XML
 Dateien im ZIP Container) und der Bearbeitung des XML-Baumes vor und/oder nach Ausführung des
@@ -293,7 +293,7 @@ Alle Anweisungen können erstellt werden über die vereinfachten Factory-Methode
 `com.mz.solutions.office.instruction.DocumentProcessingInstruction` oder händisch durch
 Implementieren der jeweiligen Klassen.
 
-__Kopf- und Fußzeilen werden (derzeit) nur bei {@code ODT} Dokumente unterstützt.__
+__Kopf- und Fußzeilen werden (derzeit) nur bei `ODT` Dokumente unterstützt.__
 ```java
  // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
  final OfficeDocument anyDocument = ...
