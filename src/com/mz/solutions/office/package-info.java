@@ -120,8 +120,9 @@
  * <i>Tabellenbezeichung</i> wird in OpenOffice direkt in den Eigenschaften
  * der Tabelle unter "Name" hinterlegt. Der Name muss in Großbuchstaben
  * eingetragen werden.<br><br>
- * <i>Kopf- und Fußzeilen</i> werden beim Ersetzungsvorgang nicht berücksichtigt
- * und sollten auch keine Platzhalter enthalten.<br><br>
+ * <i>Kopf- und Fußzeilen</i> werden beim normalen Ersetzungsvorgang nicht berücksichtigt.
+ * Mit Dokumenten-Anweisungen können Kopf- und Fußzeilen bei ODT Dokumenten ersetzt werden.
+ * Siehe dazu Abschnitt Dokumenten-Anweisungen.<br><br>
  * Es werden ODF Dateien ab Version 1.1 unterstützt; nicht zu verwechseln mit
  * der OpenOffice Versionummerierung.<br><br></p>
  * 
@@ -158,5 +159,116 @@
  * Word-bekannte Feldbefehle enthalten.<br><br>
  * Word-Dokumente ab Version 2007 im Open XML Document Format ({@code DOCX})
  * werden unterstützt.</p>
+ * 
+ * <p><b>Umgang mit dem Einsetzen/Ersetzen von Bildern in Dokumenten:</b><br>
+ * Bilder können in Vorlage-Dokumenten eingesetzt sowie durch andere ersetzt werden. Bei
+ * Text-Platzhaltern (MergeFields bei Microsoft, User-Def-Fields bei Libre/Openoffice), wird bei
+ * einem Bild-Wert {@link com.mz.solutions.office.model.images.ImageValue} an jene Stelle das
+ * als {@link com.mz.solutions.office.model.images.ImageResource} geladene Bild eingesetzt unter
+ * Verwendung der angegebenen Abmaße aus dem Bild-Wert.<br>
+ * Bestehende Bilder können ersetzt/ausgetauscht werden und, wenn gewünscht, deren bestehenden
+ * Abmaße in der Vorlage mit eigenen überschrieben/ersetzt werden. Bild-Platzhalter, also in der
+ * Vorlage bereits existierende Bilder, werden als Platzhalter erkannt, wenn dem Bild in der
+ * Vorlage in den Eigenschaften [Titel, Name, Beschreibung, Alt-Text] ein bekannter Platzhalter
+ * mit Bild-Wert angegeben wurde. Genaueres ist den folgenden Klassen zu entnehmen:</p>
+ * 
+ * <pre>
+ *  {@link com.mz.solutions.office.model.images.ImageResource}
+ *  Bild-Datei/-Resource (Bild als Byte-Array mit Angabe des Formates)
+ * 
+ *  {@link com.mz.solutions.office.model.images.ImageValue}
+ *  Bild-Wert (Resource) mit weiteren Angaben wie Titel (optional), Beschreibung (optional)
+ *  und anzuwendende Abmaße.
+ * </pre>
+ * 
+ * <p>Ein Bild-Wert ({@link com.mz.solutions.office.model.images.ImageValue}) besitzt eine
+ * zugeordnete Bild-Resource ({@link com.mz.solutions.office.model.images.ImageResource}). Eine
+ * Bild-Resource kann mehrfach/gleichzeitig in mehreren Bild-Werten verwendet werden.
+ * Das Wiederverwenden von Bild-Resourcen führt zu deutlich kleineren Ergebnis-Dokumenten. Jene
+ * Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.</p>
+ * 
+ * <pre>
+ *  // Create or load Image-Resources. Try to reuse resources to reduce the file size of the
+ *  // result documents. Internally image resources cache the file content.
+ *  ImageResource imageData1 = ImageResource.loadImage(
+ *          Paths.get("image_1.png"), StandardImageResourceType.PNG);
+ * 
+ *  ImageResource imageData2 = ImageResource.loadImage(
+ *          Paths.get("image_2.bmp"), StandardImageResourceType.BMP);
+ * 
+ *  ImageValue image1Small = new ImageValue(imageData1)
+ *          .setDimension(0.5D, 0.5D, UnitOfLength.CENTIMETERS)     // default 3cm x 1cm
+ *          .setTitle("Image Title")                                // optional
+ *          .setDescription("Alternative Text Description");        // optional
+ * 
+ *  ImageValue image1Large = new ImageValue(imageData1) // same image as image1Small (sharing res.)
+ *          .setDimension(15, 15, UnitOfLength.CENTIMETERS);
+ * 
+ *  ImageValue image2 = new ImageValue(imageData2)
+ *          .setDimension(40, 15, UnitOfLength.MILLIMETERS)
+ *          .setOverrideDimension(true);
+ * 
+ *  // Assigning ImageValue's to DataValue's
+ *  final DataPage page = new DataPage();
+ * 
+ *  page.addValue(new DataValue("IMAGE_1_SMALL", image1Small));
+ *  page.addValue(new DataValue("IMAGE_1_LARGE", image1Large));
+ *  page.addValue(new DataValue("IMAGE_2", image2));
+ *  page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
+ * </pre>
+ * 
+ * <p><b>Dokument-Anweisungen mit
+ * {@link com.mz.solutions.office.instruction.DocumentProcessingInstruction} übergeben:</b><br>
+ * Dem Ersetzungs-Vorgang können weitere Anweisungen/Callbacks mit übergeben werden. Derzeit
+ * mögliche Anweisungen ist das Abfangen (oder gezielte Laden) von Dokumenten-Teilen (also XML
+ * Dateien im ZIP Container) und der Bearbeitung des XML-Baumes vor und/oder nach Ausführung des
+ * Ersetzungs-Vorganges.<br>
+ * Bei LibreOffice/Apache-OpenOffice können dazu bei ODT Dateien die Kopf- und Fußzeilen im
+ * Ersetzungs-Prozess mit einbezogen werden.<br>
+ * Alle Anweisungen können erstellt werden über die vereinfachten Factory-Methoden in
+ * {@link com.mz.solutions.office.instruction.DocumentProcessingInstruction} oder händisch durch
+ * Implementieren der jeweiligen Klassen.</p>
+ * 
+ * <p>Kopf- und Fußzeilen werden (derzeit) nur bei {@code ODT} Dokumente unterstützt.</p>
+ * <pre>
+ *  // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
+ *  final OfficeDocument anyDocument = ...
+ * 
+ *  final DataPage documentData = ...
+ *  final DataPage headerData = ...     // Header und Footer replacement only for ODT-Files
+ *  final DataPage footerData = ...
+ * 
+ *  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
+ *          DocumentProcessingInstruction.replaceHeaderWith(headerData),
+ *          DocumentProcessingInstruction.replaceFooterWith(footerData));
+ * </pre>
+ * 
+ * <p>Document-Interceptors werden bei beiden Office-Implementierungen unterstützt.</p>
+ * <pre>
+ *  final DocumentInterceptorFunction interceptorFunction = ...
+ *  final DocumentInterceptorFunction changeCustomXml = (DocumentInterceptionContext context) -&gt; {
+ *      final Document xmlDocument = context.getXmlDocument();
+ *      final NodeList styleNodes = xmlDocument.getElementsByTagName("custXml:customers");
+ * 
+ *      // add/remove/change XML document
+ *      // 'context' should contain all data and access you will need
+ *  };
+ * 
+ *  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
+ *          // Intercept main document part (document body)
+ *          DocumentProcessingInstruction.interceptDocumentBody(
+ *                  DocumentInterceptorType.BEFORE_GENERATION,  // invoke interceptor before
+ *                  interceptorFunction, // change low level document function (Callback-Method)
+ *                  dataMapForInterceptorFunctionHere), // data is optional
+ *          // Intercept styles part of this document, maybe to change font-scaling afterwards
+ *          DocumentProcessingInstruction.interceptDocumentStylesAfter(
+ *                  interceptorFunction), // no data for this callback function
+ *          // let us change the Custom XML Document Part (only MS Word) und fill with our data
+ *          DocumentProcessingInstruction.interceptXmlDocumentPart(
+ *                  "word/custom/custPropItem.xml", // our Custom XML data
+ *                  DocumentInterceptorType.AFTER_GENERATION, // before or after doesn't matter
+ *                  changeCustomXml));
+ *          
+ * </pre>
  */
 package com.mz.solutions.office;

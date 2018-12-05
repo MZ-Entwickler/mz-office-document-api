@@ -40,7 +40,7 @@ public final class DataPage extends AbstractDataSet
      * {@inheritDoc}
      */
     @Override
-    public Optional<DataTable> getTableByName(String tableName) {
+    public Optional<DataTable> getTableByName(CharSequence tableName) {
         return super.getTableByName(tableName);
     }
 
@@ -83,7 +83,7 @@ public final class DataPage extends AbstractDataSet
      * {@inheritDoc}
      */
     @Override
-    public Optional<DataValue> getValueByKey(String keyName) {
+    public Optional<DataValue> getValueByKey(CharSequence keyName) {
         return super.getValueByKey(keyName);
     }
     

@@ -23,6 +23,8 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.OfficeDocumentException.DocumentPlaceholderMissingException;
 import com.mz.solutions.office.OfficeDocumentException.NoDataForDocumentGenerationException;
+import com.mz.solutions.office.extension.ExtendedValue;
+import com.mz.solutions.office.instruction.DocumentInterceptor;
 import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataTable;
@@ -30,17 +32,29 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.images.ExternalImageResource;
+import com.mz.solutions.office.model.images.ImageResource;
+import com.mz.solutions.office.model.images.ImageResourceType;
+import com.mz.solutions.office.model.images.ImageValue;
+import com.mz.solutions.office.model.images.LocalImageResource;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import static mz.solutions.office.resources.OpenDocumentKeys.NO_DATA;
 import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_FORMATTING_CHAR;
 import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_PLACE_HOLDER;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -48,41 +62,39 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     
     private static final String ZIP_DOC_CONTENT = "content.xml";
     private static final String ZIP_DOC_STYLES = "styles.xml";
+    private static final String ZIP_MANIFEST = "META-INF/manifest.xml";
     
     private final MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
+    private volatile int imageCounter = 16_000;
+    private volatile Map<ImageResource, String> cacheImageResources = new IdentityHashMap<>();
+    
     public OpenDocument(OfficeDocumentFactory factory, Path document) {
-        super(factory, document, ZIP_DOC_CONTENT, ZIP_DOC_STYLES);
+        super(factory, document);
     }
 
     @Override
     protected String getImplementedOfficeName() {
         return "Apache OpenOffice 4.x / LibreOffice";
     }
-
     
     @Override
-    protected ZIPDocumentFile createAndFillDocument(
-            final Iterator<DataPage> dataPages) {
+    protected void createAndFillDocument(Iterator<DataPage> dataPages) {
+        this.imageCounter = 16_000;
+        this.cacheImageResources.clear();
         
-        final ZIPDocumentFile newFile = sourceDocumentFile.cloneDocument();
-        
-        fillDocuments0(dataPages, newFile);
-            
-        return newFile;
+        try {
+            fillDocuments0(dataPages);
+        } finally {
+            this.cacheImageResources.clear();
+        }
     }
     
-    private void fillDocuments0(
-            final Iterator<DataPage> dataPages,
-            final ZIPDocumentFile outputDocument) {
+    private void fillDocuments0(final Iterator<DataPage> dataPageIterator) {
+        final Document documentContent = getDocumentPart(ZIP_DOC_CONTENT);
+        removeUserFieldDeclaration(documentContent);
         
-        final Document newContent = (Document) sourceContent.cloneNode(true);
-        final Document newStyles = (Document) sourceStyles.cloneNode(true);
-        
-        removeUserFieldDeclaration(newContent);
-        
-        final Node nodeContentBody = findDocumentBody(newContent);
-        final Node nodeContentBodyCopy = nodeContentBody.cloneNode(true);
+        final Node nodeContentBody = findDocumentBody(documentContent);
         
         // Leeren Content-Body um alle Datensätze anfügen zu können
         final Node newFullContentBody = nodeContentBody.cloneNode(true);
@@ -92,14 +104,13 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             newFullContentBody.removeChild(bodyChildNodes.item(i));
         }
         
-        boolean firstPage = true;
         boolean missingDataPages = true;
         
-        while (dataPages.hasNext()) {
-            final DataPage nextPage = dataPages.next();
+        while (dataPageIterator.hasNext()) {
+            final DataPage nextPage = dataPageIterator.next();
             final Node newContentBody = nodeContentBody.cloneNode(true);
             
-            replaceFields(newContentBody, nextPage);
+            replaceDocumentTree(newContentBody, nextPage);
             
             // Alle Elemente im leeren Content-Body anfügen
             final NodeList filledNodes = newContentBody.getChildNodes();
@@ -109,8 +120,9 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             }
             
             missingDataPages = false;
-            firstPage = false;
         }
+        
+        processHeaderFooter();
         
         if (missingDataPages) {
             if (ignoreMissingDataPages()) {
@@ -124,10 +136,83 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         // Gefüllten Body-Node tauschen mit ursprünglichem Bode-Node
         final Node parentNode = nodeContentBody.getParentNode();
         parentNode.replaceChild(newFullContentBody, nodeContentBody);
-
-        overwrite(outputDocument, ZIP_DOC_CONTENT, newContent);
-        overwrite(outputDocument, ZIP_DOC_STYLES, newStyles);
     }
+    
+    private Document getDocumentManifest() {
+        return getDocumentPart(ZIP_MANIFEST);
+    }
+    
+    private void processHeaderFooter() {
+        if (hasHeaderFooterInstructions() == false) return;
+        
+        final Document stylesDocument = getDocumentPart(ZIP_DOC_STYLES);
+        final Optional<Element> officeMasterStyles = elementByTagName(
+                "office:master-styles", stylesDocument.getDocumentElement());
+        
+        if (officeMasterStyles.isPresent() == false) return;
+        
+        final NodeList headerElements = officeMasterStyles.get().getElementsByTagName("style:header");
+        final NodeList footerElements = officeMasterStyles.get().getElementsByTagName("style:footer");
+        
+        final String attrPageStyleName = officeMasterStyles.get().getAttribute("style:name");
+        final String attrPageLayoutName = officeMasterStyles.get().getAttribute("style:page-layout-name");
+        
+        for (int i = 0; i < headerElements.getLength(); i++) {
+            replaceHeaderFooterElement(
+                    (Element) headerElements.item(i), true /* header */,
+                    attrPageStyleName, attrPageLayoutName);
+        }
+        
+        for (int i = 0; i < footerElements.getLength(); i++) {
+            replaceHeaderFooterElement(
+                    (Element) footerElements.item(i), false /* header */,
+                    attrPageStyleName, attrPageLayoutName);
+        }
+    }
+    
+    private void replaceHeaderFooterElement(Element element, boolean header, String ... names) {
+        DataMap<?> values = null;
+        
+        for (String singleName : names) {
+            if (null == singleName) continue;
+            if (singleName.isEmpty()) continue;
+            
+            final Optional<DataMap<?>> opData = callHeaderFooterInstruction(singleName, header);
+            
+            if (null != opData && opData.isPresent()) {
+                values = opData.get();
+                break;
+            }
+        }
+        
+        if (null == values) {
+            Optional<DataMap<?>> opData = callHeaderFooterInstruction("", header);
+            if (null != opData && opData.isPresent()) {
+                values = opData.get();
+            }
+        }
+        
+        if (null == values) return; // Kein Ersetzungsvorgang
+        
+        replaceDocumentTree(element, values);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    @Override
+    protected String normalizePartName(String inputPartName) {
+        if (DocumentInterceptor.GENERIC_PART_BODY.equals(inputPartName)) {
+            return ZIP_DOC_CONTENT;
+        }
+        
+        if (DocumentInterceptor.GENERIC_PART_STYLES.equals(inputPartName)) {
+            return ZIP_DOC_STYLES;
+        }
+        
+        return inputPartName;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     private void removeUserFieldDeclaration(Node documentRoot) {
         final Node textUserFieldDecls =  findUserFieldDeclaration(documentRoot);
@@ -141,49 +226,40 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         parentNode.removeChild(textUserFieldDecls);
     }
     
-    private void replaceFields(Node node, DataMap valueMap) {
-        // Normale Platzhalter ersetzen (nicht rekursiv Tabellen)
-        replaceUserFields(node, valueMap);
-        
-        // Inhalt von Tabellen die unbekannt sind, dann eben auch normal
-        // mit den vorhandenen Platzhaltern ersetzen
-        // >> bekannte Tabellen werden nicht ersetzt
-        replaceUnkownTables(node, valueMap);
-        
-        // Tabellen die bekannt sind, müssen speziell hier behandelt werden
+    private void replaceDocumentTree(Node node, DataMap valueMap) {
+        replaceUserFieldsAndImages(node, valueMap);
+        replaceTables(node, valueMap);
+    }
+    
+    private void replaceTables(Node node, DataMap valueMap) {
         for (Node tableNode : walkTables(node)) {
             final String tableName = getTableName(tableNode);
-            final boolean isKnownTable = valueMap
-                    .getTableByName(tableName)
-                    .isPresent();
-
-            if (isKnownTable) {
+            final Optional<DataTable> table = valueMap.getTableByName(tableName);
+            
+            final boolean tableIsKnown = table.isPresent();
+            
+            if (tableIsKnown) {
                 replaceKnownTable(tableNode, valueMap);
+            } else {
+                replaceUnknownTable(tableNode, valueMap);
             }
         }
     }
     
-    private void replaceUserFields(Node documentBody, DataValueMap value) {
+    private void replaceUserFieldsAndImages(Node documentBody, DataValueMap value) {
+        for (Node drawFrameNode : walkDrawFrames(documentBody)) {
+            replaceDrawFrame((Element) drawFrameNode, value);
+        }
+        
         for (Node userFieldNode : walkUserFields(documentBody)) {
             replaceUserFieldNode(userFieldNode, value);
         }
     }
     
-    private void replaceUnkownTables(Node node, DataMap valueMap) {
-        for (Node tableNode : walkTables(node)) {
-            final String name = getTableName(tableNode);
-            final Optional<DataTable> table = valueMap.getTableByName(name);
-            
-            // Die Tabelle darf NUR ersetzt werden, wenn es eine unbekannte
-            // Tabelle ist; für die Ersetzung von Tabellen mit Datenreihen
-            // ist diese Methode nicht zuständig und muss entsprechende
-            // Tabellen überspringen!
-            
-            if (table.isPresent() == true) {
-                continue; // ignorieren
-            }
-            
-            replaceUserFields(tableNode, valueMap);
+    private void replaceUnknownTable(Node tableNode, DataMap values) {
+        final NodeList childNodes = tableNode.getChildNodes();
+        for (Node anyNode : toFlatNodeList(childNodes)) {
+            replaceDocumentTree(anyNode, values);
         }
     }
     
@@ -192,16 +268,50 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         final Optional<DataTable> tableData = values.getTableByName(tableName);
         
         if (tableData.isPresent() == false) {
-            // DARF EIGENTLICH NICHT MEHR AUFTRETEN!
-            // Aufgrund der Ausnahmesituation wird hier auf
-            // eine Übersetzung verzichtet.
             throw new IllegalStateException(
                     "(Internal Error) Found unknown table: " + tableName);
         }
         
         final List<Node> tableRows = walkTableRows(tableNode).asList();
         
-        final int dataRowIndex = tableRows.size() == 1 ? 0 : 1;
+        final int dataRowIndex;// = tableRows.size() - 1; // tableRows.size() == 1 ? 0 : 1;
+        final boolean thereIsNoDataRow;
+        
+        if (hasTableHeaderRows(tableNode)) {
+            int assumedDataRowIndex = -1; // Keine Data-Row
+            
+            for (int tableRowIndex = 0; tableRowIndex < tableRows.size(); tableRowIndex++) {
+                final Element tableRow = (Element) tableRows.get(tableRowIndex);
+                final Node tableRowParent = tableRow.getParentNode();
+                
+                if (tableRowParent instanceof Element == false) continue;
+                
+                final boolean isHeaderRow = ((Element) tableRowParent).getNodeName()
+                        .equals("table:table-header-rows");
+                
+                if (isHeaderRow) {
+                    continue;   // Kopf-Zeilen ignorieren wir einfach
+                } else {
+                    assumedDataRowIndex = tableRowIndex;
+                    break;
+                }
+            }
+            
+            // Wenn dataRowIndex||assumedDataRowIndex == -1 dann:
+            // Keine Datenzeile gefunden? Dann sind alles Kopf-Zeilen. Ersetzungsvorgang
+            // kann somit nach dem Ersetzen der Kopfzeilen enden.
+            if (assumedDataRowIndex == -1) {
+                thereIsNoDataRow = true;
+            } else {
+                thereIsNoDataRow = false;
+            }
+            
+            dataRowIndex = assumedDataRowIndex;
+        } else {
+            dataRowIndex = tableRows.size() == 1 ? 0 : 1;
+            thereIsNoDataRow = false;
+        }
+        
         final Node tableDataRow = tableRows.get(dataRowIndex);
         
         // Alle Zeilen die NICHT die zu wiederholende Datenzeilen sind
@@ -211,7 +321,12 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 continue;
             }
             
-            replaceUserFields(tableRows.get(i), tableData.get());
+            replaceUserFieldsAndImages(tableRows.get(i), tableData.get());
+        }
+        
+        if (thereIsNoDataRow) {
+            // Keine Datenzeile vorhanden. Also kann die Ersetzung jener ausfallen.
+            return;
         }
         
         final Iterator<DataTableRow> rowIterator = tableData.get().iterator();
@@ -219,12 +334,30 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             final DataTableRow rowData = rowIterator.next();
             final Node newTableRow = tableDataRow.cloneNode(true);
             
-            replaceFields(newTableRow, rowData);
+            replaceDocumentTree(newTableRow, rowData);
             
             tableNode.insertBefore(newTableRow, tableDataRow);
         }
         
         tableNode.removeChild(tableDataRow);
+    }
+    
+    private boolean hasTableHeaderRows(Node tableNode) {
+        final NodeList tableChilds = tableNode.getChildNodes();
+        
+        if (tableChilds.getLength() == 0)  return false;
+        
+        for (int i = 0; i < tableChilds.getLength(); i++) {
+            final Node tableChildNode = tableChilds.item(i);
+            
+            if (tableChildNode instanceof Element == false) continue;
+            
+            if (((Element) tableChildNode).getNodeName().equals("table:table-header-rows")) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     private void replaceUserFieldNode(Node userFieldNode, DataValueMap values) {
@@ -244,6 +377,12 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         interceptionContext.init(fieldName, values);
         
         final DataValue dataValue = handleInterception(value.get(), interceptionContext);
+        if (dataValue.isExtendedValue() && dataValue.extendedValue() instanceof ImageValue) {
+            // Ohhh Platzhalter ist ein Bild!
+            replaceUserFieldWithDrawFrame(userFieldNode, (ImageValue) dataValue.extendedValue());
+            return;
+        }
+        
         final Set<ValueOptions> options = dataValue.getValueOptions();
         
         final boolean isSimpleText =
@@ -311,9 +450,276 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         parentNode.removeChild(userFieldNode);
     }
     
-    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // ROUTINEN ZUR INTEGRATION VON GRAFIKEN/BILDERN IN DOKUMENTEN
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    private void replaceDrawFrame(Element drawFrame, DataValueMap values) {
+        final boolean allNeededElementsExist = elementByTagName("draw:image", drawFrame).isPresent();
+        
+        if (allNeededElementsExist == false) return;
+        
+        final ImageValue imageValue;
+        {
+            final String attrDrawName = drawFrame.getAttribute("draw:name");
+            final Optional<ImageValue> valByDrawName = getImageValueByKeyName(attrDrawName, values);
+            
+            if (valByDrawName.isPresent()) {
+                imageValue = valByDrawName.get();
+            } else {
+                final Element svgTitle = elementByTagName("svg:title", drawFrame).orElse(null);
+                if (null == svgTitle) return;
+                
+                final Optional<ImageValue> valByTitle = getImageValueByKeyName(
+                        svgTitle.getTextContent(), values);
+                
+                if (valByTitle.isPresent()) {
+                    imageValue = valByTitle.get();
+                } else {
+                    return;
+                }
+            }
+        }
+        
+        setupDrawFrameElement(drawFrame, imageValue);
+    }
+    
+    private void replaceUserFieldWithDrawFrame(Node userFieldNode, ImageValue imageValue) {
+        final Element newDrawFrame = createDrawFrameElement(userFieldNode.getOwnerDocument());
+        final Element oldUserField = (Element) userFieldNode;
+        
+        oldUserField.getParentNode().replaceChild(newDrawFrame, oldUserField);
+        
+        setupDrawFrameElement(newDrawFrame, imageValue);
+    }
+    
+    private Optional<ImageValue> getImageValueByKeyName(String keyName, DataValueMap values) {
+        if (null == keyName || keyName.isEmpty() || keyName.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        
+        final Optional<DataValue> firstValue = values.getValueByKey(keyName);
+        if (firstValue.isPresent() == false) {
+            return Optional.empty();
+        }
+        
+        interceptionContext.init(keyName, values);
+        final DataValue dataValue = handleInterception(firstValue.get(), interceptionContext);
+        if (dataValue.isExtendedValue() == false) {
+            return Optional.empty();
+        }
+        
+        final ExtendedValue extendedValue = dataValue.extendedValue();
+        if (extendedValue instanceof ImageValue == false) {
+            return Optional.empty();
+        }
+        
+        final ImageValue imageValue = (ImageValue) extendedValue;
+        
+        return Optional.of(imageValue);
+    }
+
+    
+    private void setupDrawFrameElement(Element drawFrame, ImageValue imageValue) {
+        final ImageResource imageResource = imageValue.getImageResource();
+        
+        final String imagePath = registerImageResource(imageResource);
+        
+        final String imageId = Integer.toString(imageCounter++);
+        final String attrDrawName = "Image " + imageId;
+        final String attrDrawStyleName = "GrStId" + imageId;
+        
+        drawFrame.setAttribute("draw:name", attrDrawName);
+        
+        if (drawFrame.getAttribute("draw:style-name").isEmpty()) {
+            // Style-ID vergeben und registrieren
+            drawFrame.setAttribute("draw:style-name", attrDrawStyleName);
+            
+            final NodeList nodeList = drawFrame.getOwnerDocument()
+                    .getElementsByTagName("office:automatic-styles");
+            
+            if (nodeList.getLength() == 0) {
+                throw new IllegalStateException("Format error - no office:automatic-styles");
+            }
+            
+            final Element officeAutomaticStyles = (Element) nodeList.item(0);
+            officeAutomaticStyles.appendChild(createGraphicsStyleElement(
+                    drawFrame.getOwnerDocument(), attrDrawStyleName));
+        }
+        
+        overwriteDrawFrameLink(drawFrame, imagePath);
+        applyNonVisualProperties(drawFrame, imageValue);
+        applyVisualProperties(drawFrame, imageValue);
+    }
+    
+    private void overwriteDrawFrameLink(Element drawFrame, String imagePath) {
+        final Element drawImage = elementByTagName("draw:image", drawFrame).orElse(null);
+        drawImage.setAttribute("xlink:href", imagePath);
+    }
+    
+    private void applyNonVisualProperties(Element drawFrame, ImageValue imageValue) {
+        final Element svgTitle = elementByTagName("svg:title", drawFrame).orElse(null);
+        final Element svgDesc = elementByTagName("svg:desc", drawFrame).orElse(null);
+        
+        final String orTextSvgTitle = (null == svgTitle) ? "" : svgTitle.getTextContent();
+        final String orTextSvgDesc = (null == svgDesc) ? "" : svgDesc.getTextContent();
+        
+        final String nwTextSvgTitle = imageValue.getTitle().orElse(orTextSvgTitle);
+        final String nwTextSvgDesc = imageValue.getDescription().orElse(orTextSvgDesc);
+        
+        if (null != svgTitle) drawFrame.removeChild(svgTitle);
+        if (null != svgDesc) drawFrame.removeChild(svgDesc);
+        
+        if (null != nwTextSvgTitle && nwTextSvgTitle.isEmpty() == false) {
+            final Element nwSvgTitle = drawFrame.getOwnerDocument().createElement("svg:title");
+            nwSvgTitle.setTextContent(nwTextSvgTitle);
+            drawFrame.appendChild(nwSvgTitle);
+        }
+        
+        if (null != nwTextSvgDesc && nwTextSvgDesc.isEmpty() == false) {
+            final Element nwSvgDesc = drawFrame.getOwnerDocument().createElement("svg:desc");
+            nwSvgDesc.setTextContent(nwTextSvgDesc);
+            drawFrame.appendChild(nwSvgDesc);
+        }
+    }
+    
+    private void applyVisualProperties(Element drawFrame, ImageValue imageValue) {
+        final String attrSvgHeight = drawFrame.getAttribute("svg:height");
+        final String attrSvgWidth = drawFrame.getAttribute("svg:width");
+        
+        final boolean dimensionExists = !attrSvgHeight.isEmpty() && !attrSvgWidth.isEmpty();
+        
+        if (dimensionExists && imageValue.isOverwriteDimension() == false) {
+            return;
+        }
+        
+        final String newHeight = formatLength(imageValue.getHeight()) + "mm";
+        final String newWidth = formatLength(imageValue.getWidth()) + "mm";
+        
+        drawFrame.setAttribute("svg:height", newHeight);
+        drawFrame.setAttribute("svg:width", newWidth);
+    }
+    
+    private Element createDrawFrameElement(Document document) {
+        final Element drawFrame = document.createElement("draw:frame");
+        drawFrame.setAttribute("draw:name", "");                // überschreiben
+        drawFrame.setAttribute("svg:height", "");               // überschreiben
+        drawFrame.setAttribute("svg:width", "");                // überschreiben
+        drawFrame.setAttribute("draw:style-name", "");          // überschreiben
+        drawFrame.setAttribute("style:rel-height", "scale");
+        drawFrame.setAttribute("style:rel-width", "scale");
+        drawFrame.setAttribute("text:anchor-type", "as-char");
+        
+        final Element drawImage = (Element) drawFrame.appendChild(document.createElement("draw:image"));
+        drawImage.setAttribute("xlink:actuate", "onLoad");
+        drawImage.setAttribute("xlink:show", "embed");
+        drawImage.setAttribute("xlink:type", "simple");
+        drawImage.setAttribute("xlink:href", "Pictures/12345.png"); // überschreiben
+        
+        return drawFrame;
+    }
+    
+    private Element createGraphicsStyleElement(Document document, String styleId) {
+        final Element styleStyle = document.createElement("style:style");
+        styleStyle.setAttribute("style:name", styleId);
+        styleStyle.setAttribute("style:family", "graphic");
+        styleStyle.setAttribute("style:parent-style-name", "Graphics");
+        
+        final Element styleGraphicProperties = (Element) styleStyle.appendChild(
+                document.createElement("style:graphic-properties"));
+        
+        styleGraphicProperties.setAttribute("fo:background-color", "transparent");
+        styleGraphicProperties.setAttribute("fo:border", "none");
+        
+        return styleStyle;
+    }
+    
+    private String registerImageResource(ImageResource imageResource) {
+        final ImageResourceType mimeType;
+        {
+            final ImageResourceType originMimeType = Objects.requireNonNull(
+                    imageResource.getImageFormatType(),
+                    "ImageResource#getImageFormatType() == null");
+            
+            if (originMimeType instanceof OpenDocumentImageResourceType) {
+                mimeType = originMimeType;
+            } else {
+                mimeType = convert(originMimeType, OpenDocumentImageResourceType.values());
+            }
+        }
+        
+        if (cacheImageResources.containsKey(imageResource)) {
+            return cacheImageResources.get(imageResource);
+        }
+        
+        final boolean isExternalResource = imageResource instanceof LocalImageResource
+                || imageResource instanceof ExternalImageResource;
+        
+        if (isExternalResource && loadAndEmbedExternalImages() == false) {
+            // Resource ist extern, und soll anhand der Einstellungen nicht eingebunden werden.
+            // Der zurück gegebene Pfad ist dementsprechend extern und wird nicht registriert
+            if (imageResource instanceof ExternalImageResource) {
+                final String resourceURL =  ((ExternalImageResource) imageResource)
+                        .getResourceURL().toString();
+                
+                this.cacheImageResources.put(imageResource, resourceURL);
+                
+                return resourceURL;
+            } else if (imageResource instanceof LocalImageResource) {
+                final String localFilePath = "file:///" + ((LocalImageResource) imageResource)
+                        .getLocalResource().toAbsolutePath().toString().replace('\\', '/');
+                
+                this.cacheImageResources.put(imageResource, localFilePath);
+                
+                return localFilePath;
+            }
+        }
+        
+        // MIME-Type mit internem Dateipfad eintragen
+        final String imagePath = "Pictures/img"
+                + (UUID.randomUUID().toString().replace("-", "") + ".")
+                + mimeType.getFileNameExtensions()[0];
+        
+        final NodeList manifestNodeList = getDocumentManifest().getElementsByTagName("manifest:manifest");
+        if (manifestNodeList.getLength() == 0) {
+            throw new IllegalStateException("Internal - no manifest root element found");
+        }
+        
+        final Element manifest = (Element) manifestNodeList.item(0);
+        final Element manifestFileEntry = createManifestFileEntryElement(
+                Objects.requireNonNull(
+                        mimeType.getMimeType(),
+                        "ImageResourceType#getMimeType() == null"),
+                imagePath);
+        
+        manifest.appendChild(manifestFileEntry);
+        
+        // Zum Pfad die Bild-Resource einbinden
+        getNewDocumentFile().createNewFileInZip(imagePath);
+        getNewDocumentFile().overwrite(imagePath, Objects.requireNonNull(
+                imageResource.loadImageData(), "ImageResource#loadData() == null"));
+        
+        this.cacheImageResources.put(imageResource, imagePath);
+        
+        return imagePath;
+    }
+    
+    private Element createManifestFileEntryElement(String mimeType, String resourcePath) {
+        final Element manifestFileEntry = getDocumentManifest().createElement("manifest:file-entry");
+        manifestFileEntry.setAttribute("manifest:media-type", mimeType);
+        manifestFileEntry.setAttribute("manifest:full-path", resourcePath);
+        return manifestFileEntry;
+    }
+    
+    private String formatLength(double length) {
+        return BigDecimal.valueOf(length)
+                .setScale(4, RoundingMode.CEILING)
+                .toPlainString();
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     // XML Manipulations Methoden
-    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     private Node findDocumentBody(Node rootNode) {
         return findNodeByName(rootNode, "office:body");
@@ -345,6 +751,11 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 .noRecursionByElements("table:table");
     }
     
+    private GenericNodeIterator walkDrawFrames(Node rootNode) {
+        return new GenericNodeIterator(rootNode, "draw:frame")
+                .noRecursionByElements("table:table");
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // INTERCEPTION CONTEXT FÜR DIE VERWENDUNG VON VALUE-INTERCEPTOR'S
     ////////////////////////////////////////////////////////////////////////////////////////////////

@@ -36,6 +36,7 @@ import java.util.Objects;
 import java.util.Optional;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
+import javax.annotation.concurrent.NotThreadSafe;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import static mz.solutions.office.resources.OfficeDocumentFactoryKeys.INVALID_PROP_VALUE;
 import static mz.solutions.office.resources.OfficeDocumentFactoryKeys.NO_PROPERTY;
@@ -46,6 +47,7 @@ import static mz.solutions.office.resources.OfficeDocumentFactoryKeys.NO_PROPERT
  * 
  * @author  Riebe, Moritz   (moritz.riebe@mz-solutions.de)
  */
+@NotThreadSafe
 public abstract class OfficeDocumentFactory {
     
     ////////////////////////////////////////////////////////////////////////////
@@ -176,6 +178,7 @@ public abstract class OfficeDocumentFactory {
         setProperty(OfficeProperty.ERR_ON_MISSING_VAL, Boolean.TRUE);
         setProperty(OfficeProperty.ERR_ON_VER_MISMATCH, Boolean.FALSE);
         setProperty(OfficeProperty.ERR_ON_NO_DATA, Boolean.TRUE);
+        setProperty(OfficeProperty.IMG_LOAD_AND_EMBED_EXTERNAL, Boolean.TRUE);
     }
     
     /**

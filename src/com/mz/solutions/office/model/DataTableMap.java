@@ -61,7 +61,7 @@ public interface DataTableMap<TReturnInstance> {
      * @return          Tabelle mit der entsprechenden Bezeichnung
      *                  oder {@code Optional.empty()}
      */
-    public Optional<DataTable> getTableByName(String tableName);
+    public Optional<DataTable> getTableByName(CharSequence tableName);
     
     
     /**

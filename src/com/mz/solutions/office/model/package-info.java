@@ -52,12 +52,12 @@
  *  x.add(y)     | DataPage    DataTable   DataTableRow    DataValue
  *  -------------+--------------------------------------------------------------
  *  DataPage     | NEIN        JA          NEIN            JA
- *  DataTable    | NEIN        NEIN        JA              JA
- *  DataTableRow | NEIN        JA          NEIN            JA*
+ *  DataTable    | NEIN        NEIN        JA              JA*
+ *  DataTableRow | NEIN        JA          NEIN            JA
  *  DataValue    | NEIN        NEIN        NEIN            NEIN
  * 
- *  * Einfache DataValue's in DataTableRow, werden zum Ersetzen der Kopf und
- *    der Fußzeile verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
+ *  * Einfache DataValue's in DataTable, werden zum Ersetzen der Kopf und
+ *    der Fußzeile in der Tabelle verwendet; nicht zum Ersetzen von Platzhalter in den Zeilen.
  * 
  * </pre><p>Dabei ist zu beachten, dass {@link DataTable} und {@link DataValue}
  * benannte Objekte sind und entsprechend eine Bezeichnung besitzen. Jede
@@ -76,6 +76,16 @@
  *  invoiceDocument.addValue(new DataValue("Nachname", "Mustermann"));
  *  invoiceDocument.addValue(new DataValue("Vorname", "Max"));
  *  invoiceDocument.addValue(new DataValue("ReDatum", "2015-01-01"));
+ * 
+ *  // Angeben des Unternehmens-Logos im Rechnungs-Dokument
+ *  ImageResource companyLogoImage = ImageResource.loadImage(
+ *          Paths.get("company.png"), StandardImageResourceType.PNG);
+ * 
+ *  ImageValue companyLogo = new ImageValue(companyLogoImage)
+ *          .setTitle("Big Example AG")
+ *          .setDescription("Big Company Logo");
+ * 
+ *  invoiceDocument.addValue(new DataValue("Logo", companyLogo);
  * 
  *  // Tabelle mit den Rechnungsposten
  *  DataTable invoiceItems = new DataTable("Rechnungsposten");

@@ -46,8 +46,20 @@ public final class MicrosoftProperty<TPropertyValue>
      */
     public static final MicrosoftProperty<Boolean> INS_HARD_PAGE_BREAKS;
     
+    /**
+     * Bestimmt das einzufügende Bilder - soweit möglich - per Drawing-Element ins Dokument
+     * eingefügt werden sollen und nicht per VML (VML Shape).
+     * 
+     * <p>Bei der Voreinstellung {@code Boolean.TRUE} wird, soweit dies funktional möglich ist,
+     * das Drawing-Element (Zeichnungs-Element) verwendet um Bilder/Grafiken in Word-Dokumenten
+     * einzufügen. Wird auf {@code Boolean.FALSE} umgestellt, wird - soweit möglich - VML verwendet
+     * um Bilder einzufügen.</p>
+     */
+    public static final MicrosoftProperty<Boolean> USE_DRAWING_OVER_VML;
+    
     static {
         INS_HARD_PAGE_BREAKS = new MicrosoftProperty<>("INS_HARD_PAGE_BREAKS");
+        USE_DRAWING_OVER_VML = new MicrosoftProperty<>("USE_DRAWING_OVER_VML");
     }
     
     ////////////////////////////////////////////////////////////////////////////

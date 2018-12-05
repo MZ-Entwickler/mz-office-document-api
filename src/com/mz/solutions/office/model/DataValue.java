@@ -63,7 +63,7 @@ import static mz.solutions.office.resources.MessageResources.formatMessage;
  * 
  * @author  Riebe, Moritz       (moritz.riebe@mz-solutions.de)
  */
-public final class DataValue implements Serializable {
+public final class DataValue implements Serializable, CharSequence {
     
     private static final ValueOptions DEFAULT_OPTION_TABULATOR;
     private static final ValueOptions DEFAULT_OPTION_LINEBREAK;
@@ -103,7 +103,7 @@ public final class DataValue implements Serializable {
      * Erzeugt ein Platzhalter Bezeichner-Werte-Paar mit Vorsteinstellungen.
      * 
      * <p>Genauere Beschreibung findet sich in der Konstruktorbeschreibung von:
-     * {@link #DataValue(String, String, ValueOptions...)}. </p>
+     * {@link #DataValue(CharSequence, CharSequence, ValueOptions...)}. </p>
      * 
      * @param keyName   Bezeichner des Platzhalters; Groß- und Kleinschreibung
      *                  ist unrelevant; mindestens zwei Zeichen; darf nicht
@@ -112,11 +112,11 @@ public final class DataValue implements Serializable {
      * @param value     Wert des Platzhalters; bei {@code null} wird von einer
      *                  leeren Zeichenkette ausgegangen
      */
-    public DataValue(String keyName, String value) {
-        this.keyName = prepareKeyName(keyName);
+    public DataValue(CharSequence keyName, @Nullable CharSequence value) {
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = defaultOptions;
-        this.value = prepareValueByOptions(value);
+        this.value = prepareValueByOptions(unsafeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -140,13 +140,13 @@ public final class DataValue implements Serializable {
      * @param valueOptions  Angabe von Optionen die auf den Wert angewendetet
      *                      werden sollen beim Ersetzungsvorgang
      */
-    public DataValue(String keyName, String value,
+    public DataValue(CharSequence keyName, @Nullable CharSequence value,
             ValueOptions ... valueOptions) {
         
-        this.keyName = prepareKeyName(keyName);
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         
         this.options = prepareValueOptions(valueOptions);
-        this.value = prepareValueByOptions(value);
+        this.value = prepareValueByOptions(unsafeToString(value, "value"));
         
         this.extValue = null;
     }
@@ -158,7 +158,7 @@ public final class DataValue implements Serializable {
      * 
      * <p>Die Angabe von Optionen entfällt in diesem Falle. Die Beschränkungen
      * des Platzhalter-Bezeichners sind mit den anderen Konstruktoren
-     * (siehe {@link #DataValue(String, String)}) identisch.</p>
+     * (siehe {@link #DataValue(CharSequence, CharSequence)}) identisch.</p>
      * 
      * @param keyName       Bezeichner des Platzhalters, nie {@code null}.
      * 
@@ -166,12 +166,38 @@ public final class DataValue implements Serializable {
      *                      Erweiterungsschnittstellen. Nie {@code null}.
      */
     
-    public DataValue(String keyName, ExtendedValue extValue) {
-        this.keyName = prepareKeyName(keyName);
+    public DataValue(CharSequence keyName, ExtendedValue extValue) {
+        this.keyName = prepareKeyName(safeToString(keyName, "keyName"));
         this.options = defaultOptions;
         
         this.extValue = Objects.requireNonNull(extValue, "extValue");
         this.value = prepareValueByOptions(extValue.altString());
+    }
+    
+    private String safeToString(@Nullable CharSequence charSeq, String varName) {
+        if (null == charSeq) {
+            throw new NullPointerException(varName);
+        }
+        
+        final String strValue = charSeq.toString();
+        if (null == strValue) {
+            throw new NullPointerException(varName + ".toString()");
+        }
+        
+        return strValue;
+    }
+    
+    private String unsafeToString(@Nullable CharSequence charSeq, String varName) {
+        if (null == charSeq) {
+            return "";
+        }
+        
+        final String strValue = charSeq.toString();
+        if (null == strValue) {
+            return "";
+        }
+        
+        return strValue;
     }
     
     private String prepareKeyName(String keyName) {
@@ -351,7 +377,39 @@ public final class DataValue implements Serializable {
     public Set<ValueOptions> getValueOptions() {
         return this.options;
     }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // CharSequence
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int length() {
+        return getValue().length();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public char charAt(int index) {
+        return getValue().charAt(index);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CharSequence subSequence(int start, int end) {
+        return getValue().subSequence(start, end);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Hash, Equals, ToString
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     /**
      * Erzeugt einen möglichst gleich verteilten Hash-Code.
      * 
@@ -411,6 +469,18 @@ public final class DataValue implements Serializable {
     }
     
     /**
+     * Gibt den Wert des Platzhalters unverändert zurück.
+     * 
+     * <p>Identisch mit der Rückgabe von {@link #getValue()}.</p>
+     * 
+     * @return  Rückgabe von {@link #getValue()}.
+     */
+    @Override
+    public String toString() {
+        return getValue();
+    }
+    
+    /**
      * Wandelt den Platzhalterbezeichner und Platzhalterwert dieses Objektes
      * als zusammenhängende Zeichenkette um mit Angabe der Optionen soweit
      * diese von der Standardbelegung abweichen.
@@ -434,8 +504,7 @@ public final class DataValue implements Serializable {
      * @return      Repräsentation dies Objektes als Zeichenkette; gibt
      *              niemals {@code null} zurück.
      */
-    @Override
-    public String toString() {
+    public String toStringEx() {
         final StringBuilder builder = new StringBuilder();
         
         builder.append("DataValue: keyName=\'").append(keyName);

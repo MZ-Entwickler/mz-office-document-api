@@ -23,17 +23,29 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.OfficeDocumentException.FailedDocumentGenerationException;
 import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForImplementation;
+import com.mz.solutions.office.instruction.DocumentInterceptor;
+import com.mz.solutions.office.instruction.DocumentInterceptorType;
+import com.mz.solutions.office.instruction.DocumentProcessingInstruction;
+import com.mz.solutions.office.instruction.HeaderFooterInstruction;
+import com.mz.solutions.office.model.DataMap;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.DataValueMap;
+import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Arrays;
+import static java.util.Collections.disjoint;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -51,6 +63,7 @@ import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.IMPL_N
 import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
 import static mz.solutions.office.resources.MessageResources.formatMessage;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -64,13 +77,11 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     protected final OfficeDocumentFactory myOfficeFactory;
     
     // Originale Daten - Sollten NICHT verändert werden!!
-    protected final ZIPDocumentFile sourceDocumentFile;
-    protected final Document sourceContent;
-    protected final Document sourceStyles;
+    private final ZIPDocumentFile sourceDocumentFile;
     
     // XML Factories
-    protected final DocumentBuilderFactory docBuilderFactory;
-    protected final DocumentBuilder docBuilder;
+    private final DocumentBuilderFactory docBuilderFactory;
+    private final DocumentBuilder docBuilder;
     
     {
         docBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -83,8 +94,8 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
-    protected final TransformerFactory transformerFactory;
-    protected final Transformer transformer;
+    private final TransformerFactory transformerFactory;
+    private final Transformer transformer;
     
     {
         transformerFactory = TransformerFactory.newInstance();
@@ -96,18 +107,18 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
-    public AbstractOfficeXmlDocument(
-            OfficeDocumentFactory myFactory, Path document,
-            String zipNameContent, String zipNameStyles) {
-        
+    private DocumentProcessingInstruction[] myInstructions = NO_INSTRUCTIONS;
+    private volatile BaseDocumentInterceptorContext documentInterceptorContext;
+    private volatile BaseHeaderFooterContext headerFooterContext;
+
+    private volatile ZIPDocumentFile newDocumentFile;
+    private volatile Map<String, Document> documentParts;
+    
+    public AbstractOfficeXmlDocument(OfficeDocumentFactory myFactory, Path document) {
         this.myOfficeFactory = myFactory;
         
         try {
             this.sourceDocumentFile = new ZIPDocumentFile(document);
-
-            this.sourceContent = loadFileAsXml(zipNameContent);
-            this.sourceStyles = loadFileAsXml(zipNameStyles);
-            
         } catch (Exception errorWhileLoading) {
             throw new InvalidDocumentFormatForImplementation(
                     formatMessage(INVALID_DOC_FORMAT), errorWhileLoading);
@@ -119,7 +130,7 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return myOfficeFactory;
     }
     
-    protected final Document loadFileAsXml(String zipItemFilename) {
+    private Document loadFileAsXml(String zipItemFilename) {
         return bytesToXml(sourceDocumentFile.read(zipItemFilename));
     }
     
@@ -135,6 +146,68 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
     }
     
+    protected final ZIPDocumentFile getNewDocumentFile() {
+        return newDocumentFile;
+    }
+    
+    protected final ZIPDocumentFile getSourceDocumentFile() {
+        return sourceDocumentFile;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DOCUMENT PARTS
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    protected final Document getDocumentPart(String partName) {
+        if (documentParts.containsKey(partName)) {
+            return documentParts.get(partName);
+        }
+        
+        final Document partDocument = loadFileAsXml(partName);
+        documentParts.put(partName, partDocument);
+        
+        return partDocument;
+    }
+    
+    private void writeChangedDocumentParts() {
+        for (String partName : documentParts.keySet()) {
+            final Document partDocument = documentParts.get(partName);
+            overwrite(partName, partDocument);
+        }
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DOCUMENT INTERCEPTORS
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    protected abstract String normalizePartName(String inputPartName);
+    
+    private void handleDocumentInterceptors(DocumentInterceptorType interceptorType, List<DataValueMap<?>> documentValues) {
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof DocumentInterceptor == false) continue;
+            
+            final DocumentInterceptor interceptor = (DocumentInterceptor) anyInstruction;
+            
+            if (interceptorType.equals(interceptor.getInterceptorType())) {
+                runDocumentInterceptor(interceptor, documentValues);
+            }
+        }
+    }
+    
+    private void runDocumentInterceptor(DocumentInterceptor interceptor, List<DataValueMap<?>> documentValues) {
+        final String partName = normalizePartName(interceptor.getPartName());
+        final Document partDocument = getDocumentPart(partName);
+        final Element bodyNode = partDocument.getDocumentElement();
+        
+        this.documentInterceptorContext.setInterceptor(interceptor);
+        this.documentInterceptorContext.setXmlFields(partDocument, bodyNode);
+        this.documentInterceptorContext.setDocumentValues(documentValues);
+        
+        interceptor.callInterceptor(documentInterceptorContext);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     private String getSafeImplementationName() {
         final String name = getImplementedOfficeName();
         
@@ -148,10 +221,8 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     
     protected abstract String getImplementedOfficeName();
     
-    protected final void overwrite(ZIPDocumentFile destination,
-            String filename, Node domRootNode) {
-        
-        destination.overwrite(filename, xmlToBytes(domRootNode));
+    protected final void overwrite(String filename, Node domRootNode) {
+        getNewDocumentFile().overwrite(filename, xmlToBytes(domRootNode));
     }
     
     protected final byte[] xmlToBytes(Node domRootNode) {
@@ -174,20 +245,148 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     }
     
     @Override
-    protected byte[] generate(Iterator<DataPage> dataPages)
-            throws IOException, OfficeDocumentException {
-        
-        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+    protected byte[] generate(
+            final Iterator<DataPage> dataPages,
+            final DocumentProcessingInstruction ... instructions)
+            throws IOException, OfficeDocumentException
+    {
+        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream(128 * 1024);
 
-        createAndFillDocument(dataPages).writeTo(byteOut);
+        this.newDocumentFile = sourceDocumentFile.cloneDocument();
+        
+        this.documentInterceptorContext = new BaseDocumentInterceptorContext(this);
+        this.headerFooterContext = new BaseHeaderFooterContext(this);
+        
+        this.documentParts = new HashMap<>();
+        
+        final List<DataValueMap<?>> documentValues = toDataValueMap(dataPages);
+
+        try {
+            this.myInstructions = checkInstructions(instructions);
+            
+            handleDocumentInterceptors(DocumentInterceptorType.BEFORE_GENERATION, documentValues);
+            
+            createAndFillDocument((Iterator) documentValues.iterator());
+            
+            handleDocumentInterceptors(DocumentInterceptorType.AFTER_GENERATION, documentValues);
+            
+            writeChangedDocumentParts();
+            
+            this.newDocumentFile.writeTo(byteOut);
+        } finally {
+            this.myInstructions = NO_INSTRUCTIONS;
+            this.documentInterceptorContext = null;
+            this.headerFooterContext = null;
+            this.documentParts = null;
+            this.newDocumentFile = null;
+        }
         
         return byteOut.toByteArray();
     }
+    
+    private List<DataValueMap<?>> toDataValueMap(Iterator<DataPage> dataPageIterator) {
+        final List<DataValueMap<?>> resultList = new LinkedList<>();
+        dataPageIterator.forEachRemaining(resultList::add);
+        return resultList;
+    }
+    
+    private DocumentProcessingInstruction[] checkInstructions(
+            DocumentProcessingInstruction[] instructions)
+    {
+        if (null == instructions) return NO_INSTRUCTIONS;
+        if (instructions.length == 0) return instructions;
+        
+        for (int instrIndex = 0; instrIndex < instructions.length; instrIndex++) {
+            if (null == instructions[instrIndex]) {
+                throw new NullPointerException("instructions[@index = " + instrIndex + "]");
+            }
+        }
+        
+        return instructions;
+    }
 
+    protected final DocumentProcessingInstruction[] listInstructions() {
+        return this.myInstructions;
+    }
     
-    protected abstract ZIPDocumentFile createAndFillDocument(
-            final Iterator<DataPage> dataPages);
+    protected final boolean hasInstructions() {
+        return listInstructions().length > 0;
+    }
     
+    protected abstract void createAndFillDocument(Iterator<DataPage> dataPages);
+    
+    /**
+     * Nimmt den übergebenen MIME-Type an und versucht zu diesem einen passenden zu finden aus der
+     * eigenen Liste der MIME-Typen.
+     * 
+     * <p>Ist der MIME-Type direkt in der Liste {@code mimeTypeList}, wird dieser zurück gegeben.
+     * Ansonsten wird zuerst anhand des MIME-Types (String) vergleichen und gesucht und danach nach
+     * einer passenden Datennamens-Erweiterung. Wurde kein passender MIME-Type aus
+     * {@code mimeTypeList} gefunden, wird der ursprünglich übergebene zurück gegeben.</p>
+     * 
+     * @param mimeType      Im Daten-Modell übergebener MIME-Type.
+     * @param mimeTypeList  Liste der von der Office-Implementierung unterstützten MIME-Types.
+     * @return              Soweit wie möglich passender MIME-Type zur Implementierung, ansonsten
+     *                      der ursprünglich in {@code mimeType} übergebene.
+     */
+    protected final ImageResourceType convert(
+            final ImageResourceType mimeType, final ImageResourceType[] mimeTypeList)
+    {
+        final String inMimeType = mimeType.getMimeType();
+        
+        // Schauen ob wir den selben haben anhand des MIME-Types direkt
+        for (ImageResourceType singleType : mimeTypeList) {
+            if (inMimeType.equalsIgnoreCase(singleType.getMimeType())) {
+                return singleType;
+            }
+        }
+        
+        // Wohl ein Schuss im Ofen, also suchen wir nach einer Dateinamens-Erweiterung die passen
+        // könnte.
+        final String[] inExtensions = mimeType.getFileNameExtensions();
+        final List<String> inExtList = Arrays.asList(inExtensions);
+
+        for (ImageResourceType singleType : mimeTypeList) {
+            final List<String> otherExtList = Arrays.asList(singleType.getFileNameExtensions());
+            
+            if (disjoint(inExtList, otherExtList) == false) {
+                return singleType;
+            }
+        }
+        
+        return mimeType;
+    }
+    
+    protected final boolean hasHeaderFooterInstructions() {
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof HeaderFooterInstruction) return true;
+        }
+        return false;
+    }
+    
+    protected Optional<DataMap<?>> callHeaderFooterInstruction(String name, boolean header) {
+        name = (null == name ? "" : name);
+        
+        if (header) {
+            headerFooterContext.setupAsHeader(name);
+        } else {
+            headerFooterContext.setupAsFooter(name);
+        }
+        
+        for (DocumentProcessingInstruction anyInstruction : listInstructions()) {
+            if (anyInstruction instanceof HeaderFooterInstruction == false) continue;
+            
+            final HeaderFooterInstruction instruction = (HeaderFooterInstruction) anyInstruction;
+            final Optional<DataMap<?>> result = instruction.processHeaderFooter(headerFooterContext);
+            
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+        
+        return Optional.empty();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Methoden zum Abfragen der Standard-Einstellungen
     ////////////////////////////////////////////////////////////////////////////
@@ -230,6 +429,20 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return Boolean.FALSE.equals(errOnNoData);
     }
     
+    /**
+     * Überprüft ob Bild-Resourcen von externen Quellen geladen und direkt ins Dokument eingefügt
+     * werden sollen.
+     * 
+     * @return      {@code true}, bedeutet Bild-Resource laden (in RAM) und direkt in das Dokument
+     *              schreiben (einbetten) ohne die externe Quelle weiterzureichen.
+     */
+    protected boolean loadAndEmbedExternalImages() {
+        final Boolean imgLoadAndEmbed = myOfficeFactory.getProperty(
+                OfficeProperty.IMG_LOAD_AND_EMBED_EXTERNAL);
+        
+        return Boolean.TRUE.equals(imgLoadAndEmbed);
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     // UMGANG MIT INTERCEPTOR-VALUES (CALLBACK MECHANISMUS)
     ////////////////////////////////////////////////////////////////////////////
@@ -259,6 +472,23 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
         
         return null;
+    }
+    
+    protected Optional<Element> elementByTagName(String elementName, Node elementNode) {
+        if (elementNode instanceof Element == false) {
+            throw new IllegalStateException("internal error anyNode != type Element");
+        }
+        
+        final NodeList nodeList = ((Element) elementNode).getElementsByTagName(elementName);
+        
+        for (int nodeIndex = 0; nodeIndex < nodeList.getLength(); nodeIndex++) {
+            final Node anyNode = nodeList.item(nodeIndex);
+            
+            if (anyNode instanceof Element) {
+                return Optional.of((Element) anyNode);
+            }
+        }
+        return Optional.empty();
     }
     
     protected String getAttribute(Node elementNode, String attributeName) {
