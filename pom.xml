@@ -6,7 +6,7 @@
 
     <groupId>com.mz.solutions</groupId>
     <artifactId>office-document-api</artifactId>
-    <version>0.7.1</version>
+    <version>0.8.0</version>
 
     <name>MZ Office Document Api</name>
     <description>
