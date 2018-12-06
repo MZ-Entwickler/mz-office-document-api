@@ -69,4 +69,12 @@
         </plugins>
     </build>
 
+    <distributionManagement>
+        <repository>
+            <id>nexus.repo</id>
+            <name>Nexus MZ Repo</name>
+            <url>http://5.189.155.249:8081/nexus/content/repositories/releases/</url>
+        </repository>
+    </distributionManagement>
+
 </project>

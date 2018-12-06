@@ -3,7 +3,7 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de),
+ * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
  *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,32 +41,32 @@ import static java.util.Objects.requireNonNull;
 /**
  * Microsoft Office Erweiterung einfügen/importieren/integrieren von externen Dokumenten an
  * Absatzsstellen in Word-Dokumenten; unterschiedlichen Formates.
- *
+ * 
  * <p>Einzufügende Teile können in Word-Dokumenten nur als ganze Absätze importiert werden und nicht
  * in oder zwischen Fließtexten. Als ganze Absätze zählen: der Absatz als solcher, das Hauptdokument
  * (der Body), Kommentarfelder und Tabellenzellen ({@code w:tc}). Innerhalb von Tabellenzellen auch,
  * soweit sich der Platzhalter dafür wieder in einem Absatz befindet.</p>
- *
+ * 
  * <p>Wird der Platzhalter in einem Fließtext gefunden, an dessen Stelle das Dokument importiert
  * werden soll, wird der Platzhalter entfernt und an der frühstmöglichen Stelle (es wird im Dokument
  * also soweit nach "oben gesprungen" bis es möglich ist) dann importiert. Dies kann (soweit man
  * sich der Einschränkung nicht bewusst ist) zu einer Verschiebung des Ersetzungsortes führen.</p>
- *
+ * 
  * <p>Um Dokumente zur deklarieren, die importiert werden sollen, kann die statische Funktion
  * {@link #insertFile(Path, ImportFormatType)} verwendet werden. Der zurückgegebene Wert
  * wird einfach einer {@link DataValue} Instanz übergeben, anstelle der Zeichenkette.</p>
- *
+ * 
  * <p>Zulässige Formate zum importieren/einfügen in Word-Dokumenten sind im Enum
  * {@link ImportFormatType} vollständig zusammengefasst und aufgezählt.</p>
- *
+ * 
  * <p>Besonderer Hinweis zur Serialisierung: Mit dieser Klasse erzeugte Erweiterte-Werte
  * ({@link ExtendedValue}'s) sind serialisierbar, <b>aber</b> diese speichern nicht den Inhalt des
  * einzufügenden Dokumentes, sondern lediglich den Pfad zum Dokument. Wird der Erweiterte-Wert
  * verwendet, serialisiert und zu einem anderen Zeitpunkt <u>oder</u> auf einer anderen Instanz
  * abgerufen, muss sichergestellt sein, dass das gewünschte Dokument dort vorhanden ist!</p>
- *
+ * 
  * <p><b>Beispiel</b></p>
- *
+ * 
  * <pre>
  * //// Ausführliche Belegung unter Angabe des konkreten Formates
  *
@@ -102,12 +102,12 @@ import static java.util.Objects.requireNonNull;
  * verwendet, dann ist es von Vorteil für die Ladezeit und Größe der späteren Datei, das die Instanz
  * von {@link ExtendedValue} nicht mehrfach erzeugt wird, sondern nach einmaliger Erzeugung mehrfach
  * verwendet wird.</p>
- *
+ * 
  * <p>Leere Texteinsetzungen (also Platzhalter an denen kein Dokument eingefügt werden sollen)
  * können über eine leere Zeichenkette (normales {@link DataValue}) angezeigt werden, dann bleibt
  * der Absatz vorhanden oder über {@link #insertNoFile()} kann auch der Absatz mit entfernt werden
  * bei dem keine Einfügeoperation vorgenommen werden soll.</p>
- *
+ * 
  * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
  */
 public abstract class MicrosoftInsertDoc implements Extension {
@@ -145,14 +145,12 @@ public abstract class MicrosoftInsertDoc implements Extension {
     };
 
     /**
-     * Namespace für AltChunk Elemente, Attribute und co.
-     */
+     Namespace für AltChunk Elemente, Attribute und co. */
     private static final String NS_ALT_CHUNK =
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk";
 
     /**
-     * [word/_rels/document.xml.rels]://Relationships
-     */
+     [word/_rels/document.xml.rels]://Relationships */
     private static final String EL_RELATIONSHIPS = "Relationships";
 
     /**
@@ -167,6 +165,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
     }
 
     /**
+
      * Erzeugt einen erweiterten Wert der ein ganzes Dokument repräsentieren soll, welches in der
      * späteren Vorlage/ Dokument eingefügt werden soll.
      *
@@ -174,21 +173,28 @@ public abstract class MicrosoftInsertDoc implements Extension {
      * abweichende Dateiendung besitzen; muss dies aber nicht. Es wird vor der Erzeugung des
      * erweiterten Wertes geprüft, ob das übergebene Dokument auch wirklich existent ist.</p>
      *
-     * @param docToImport Pfad zum Dokument das importiert werden soll; Dateinamenserweiterung ist
-     *                    nicht von Bedeutung, da die Angabe in {@code format} Vorrang besitzt.
-     *                    Darf nicht {@code null} sein.
-     * @param format      Format des Dokumentes, welches eingefügt werden soll. Diese Angabe
-     *                    muss unbedingt korrekt sein! Angabe von {@code null} nicht zulässig.
+     * @param docToImport   Pfad zum Dokument das importiert werden soll; Dateinamenserweiterung ist
+     *                      nicht von Bedeutung, da die Angabe in {@code format} Vorrang besitzt.
+     *                      Darf nicht {@code null} sein.
+     *
+     * @param format        Format des Dokumentes, welches eingefügt werden soll. Diese Angabe
+     *                      muss unbedingt korrekt sein! Angabe von {@code null} nicht zulässig.
+     *
      * @return Erweiterter-Wert der jedoch nicht das Dokument beinhaltet, sondern nur
-     * den Pfad zum und das Format vom Dokument. Als alternative Zeichenkette
-     * werden Pfad und Format notfalls erzeugt. Es wird nie {@code null}
-     * zurückgegeben.
-     * @throws UncheckedIOException Für den Fall, das am übergebenen Dateipfad (zum Dokument) sich kein Dokument
-     *                              befindet.
-     * @throws NullPointerException Wenn einer oder alle übergebene Parameter {@code null} sind.
+     *                      den Pfad zum und das Format vom Dokument. Als alternative Zeichenkette
+     *                      werden Pfad und Format notfalls erzeugt. Es wird nie {@code null}
+     *                      zurückgegeben.
+     *
+     * @throws UncheckedIOException
+     *          Für den Fall, das am übergebenen Dateipfad (zum Dokument) sich kein Dokument
+     *          befindet.
+     *
+     * @throws NullPointerException
+     *          Wenn einer oder alle übergebene Parameter {@code null} sind.
      */
     public static ExtendedValue insertFile(Path docToImport, ImportFormatType format)
-            throws UncheckedIOException {
+            throws UncheckedIOException
+    {
         requireNonNull(docToImport, "docToImport");
         requireNonNull(format, "format");
 
@@ -196,8 +202,9 @@ public abstract class MicrosoftInsertDoc implements Extension {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
+    
     /**
+
      * Vereinfachte Methode zum Erzeugen eines erweiterten Wertes, der ein ganzes Dokument
      * repräsentieren soll, welches in der späteren Vorlage/ Dokument eingefügt werden soll.
      *
@@ -209,12 +216,15 @@ public abstract class MicrosoftInsertDoc implements Extension {
      * geworfen. Die Exceptions der Methode {@link #insertFile(Path, ImportFormatType)}
      * können weiterhin auftreten und sich hier nicht erneut aufgeführt worden.</p>
      *
-     * @param docToImport Pfad zum Dokument das importiert werden soll; die Dateinamenserweiterung
-     *                    muss unbedingt vorhanden sein und das korrekte Format wiederspiegeln!
-     *                    Darf nicht {@code null} sein.
+     * @param docToImport   Pfad zum Dokument das importiert werden soll; die Dateinamenserweiterung
+     *                      muss unbedingt vorhanden sein und das korrekte Format wiederspiegeln!
+     *                      Darf nicht {@code null} sein.
+     *
      * @return Erweiterter-Wert (siehe andere Methode).
-     * @throws IllegalStateException Wenn das Dateiformat (aus der Dateinamenserweiterung) unbekannt ist oder nicht
-     *                               konkret ermittel bar ist. Die Exception-Message ist primär intern gedacht.
+     *
+     * @throws IllegalStateException
+     *          Wenn das Dateiformat (aus der Dateinamenserweiterung) unbekannt ist oder nicht
+     *          konkret ermittel bar ist. Die Exception-Message ist primär intern gedacht.
      */
     public static ExtendedValue insertFile(Path docToImport) {
         requireNonNull(docToImport, "docToImport");
@@ -241,23 +251,23 @@ public abstract class MicrosoftInsertDoc implements Extension {
     }
 
     /**
-     * ected abstract Document getWordDocument();
-     * pro  /**
-     * ected abstract Document getRelationshipDocument();
-     * pro  ////////////////////////////////////////////////////////////////////////////////////////////////
-     * <p>
-     * /**
-     * <p>
-     * ected abstract Document getContentTypeDocument();
-     * <p>
-     * /*  prot
+     ected abstract Document getWordDocument();
+     pro  /**
+     ected abstract Document getRelationshipDocument();
+     pro  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+     /**
+
+     ected abstract Document getContentTypeDocument();
+
+     /*  prot
      * Implementiert das hinzufügen einer "Unter"-Datei zum eigentlichen Dokument.
      *
      * <p>Implementierende Klasse muss dies entweder als ZIP ({@code *.docx}) oder besonders
      * kodoeirt bei Packaged-WordML Dateien ({@code *.xml}).</p>
      *
-     * @param partName Pfad im Document-Container
-     * @param data     Dokument
+     * @param partName  Pfad im Document-Container
+     * @param data      Dokument
      */
     protected abstract void overwritePartInContainer(String partName, byte[] data);
 
@@ -296,8 +306,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
      *
 
     {
-        @code 'word/document.xml'
-    }.</p>
+        @code 'word/document.xml'}.</p>
             *
             *
     @param
@@ -314,10 +323,8 @@ public abstract class MicrosoftInsertDoc implements Extension {
     extValue Erweiterter
     Wert der
     dieser Erweiterung
-    zu entsprechen
-    hat .
+    zu entsprechen hat.
      */
-
     public void insertAltChunkAt(Node anyNode, ExtendedValue extValue) {
         assert null != extValue : "extValue == null";
         assert isAltChunkExtValue(extValue) : "(extValue instanceof AltChunkExtValue) == false";
@@ -405,8 +412,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
         @code w:altChunk
     }
 
-    ausgetauscht werden
-    kann .
+    ausgetauscht werden kann .
      *
              *@throws IllegalStateException
      *
@@ -416,8 +422,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
     der passend
 
     ist(unwahrscheinlich).
-            */
-
+     */
     private Node findUpperAllowedParent(Node placeHolderNode) {
         assert null != placeHolderNode : "placeHolderNode == null";
 
@@ -433,7 +438,6 @@ public abstract class MicrosoftInsertDoc implements Extension {
   *
 
     lable@CheckReturnValue
-
     private Node findUpperAllowedParent0(Node node) {
         if (isValidParent(node.getParentNode())) {
             return node; // Perfekt!
@@ -509,13 +513,17 @@ public abstract class MicrosoftInsertDoc implements Extension {
     }
 
     /**
-     * ate String nullToEmpty(String value) {
-     * return null == value ? "" : value;
-     * }
+
+     ate String nullToEmpty(String value) {
+     return null == value ? "" : value;
+     }
+
+     @Nul
+      * Trägt die AltChunkID und den Speicherort in der Relationship-XML, wenn notwendig, ein.
+      *
+      * @param chunkExtValue     Erweiterter Wert
      *
-     * @param chunkExtValue Erweiterter Wert
-     * @return {@code true}, wenn eine Eintragung erfolgen musste.
-     * @Nul Trägt die AltChunkID und den Speicherort in der Relationship-XML, wenn notwendig, ein.
+     * @return                  {@code true}, wenn eine Eintragung erfolgen musste.
      */
     private boolean registerAndInsertChunkRelationship(AltChunkExtValue chunkExtValue) {
         final Document docRel = getRelationshipDocument();
@@ -584,10 +592,8 @@ public abstract class MicrosoftInsertDoc implements Extension {
      *
              *
     @param
-    extValue Erweiterter
-    Wert
+    extValue Erweiterter Wert
      */
-
     private void registerMimeType(AltChunkExtValue extValue) {
         final String FILE_EXT = extValue.getFormat().getFileExtension();
 
@@ -627,24 +633,26 @@ public abstract class MicrosoftInsertDoc implements Extension {
     }
 
     /**
-     * ate Node createRelationshipElement(AltChunkExtValue extValue) {
-     * final Document doc = getRelationshipDocument();
-     * <p>
-     * final Element elementRel = doc.createElement(EL_RELATIONSHIP);
-     * elementRel.setAttribute("Id", extValue.getChunkUID());
-     * elementRel.setAttribute("TargetMode", "Internal");
-     * elementRel.setAttribute("Type", NS_ALT_CHUNK);
-     * elementRel.setAttribute("Target", extValue.getTargetName());
-     * <p>
-     * return elementRel;
-     * }
-     * <p>
-     * /*  /**
-     * <p>
+
+     ate Node createRelationshipElement(AltChunkExtValue extValue) {
+     final Document doc = getRelationshipDocument();
+
+     final Element elementRel = doc.createElement(EL_RELATIONSHIP);
+     elementRel.setAttribute("Id", extValue.getChunkUID());
+     elementRel.setAttribute("TargetMode", "Internal");
+     elementRel.setAttribute("Type", NS_ALT_CHUNK);
+     elementRel.setAttribute("Target", extValue.getTargetName());
+
+     return elementRel;
+     }
+
+     /*  /**
+
      * Prüft ob der übergebene erweiterte Wert vom Typ dieser Erweiterung stammt.
      *
-     * @param extValue Irgendein erweiterter Wert (nicht {@code null})
-     * @return {@code true}, wenn die Wert zu dieser Erweiterung zugehörig ist.
+     * @param extValue  Irgendein erweiterter Wert (nicht {@code null})
+     *
+     * @return          {@code true}, wenn die Wert zu dieser Erweiterung zugehörig ist.
      */
     public boolean isAltChunkExtValue(ExtendedValue extValue) {
         if (null == extValue) {
@@ -663,62 +671,42 @@ public abstract class MicrosoftInsertDoc implements Extension {
  */
 public static enum ImportFormatType {
 
-    /**
-     * Extensible HyperText Markup Language File (.xhtml).
-     */
+    /** Extensible HyperText Markup Language File (.xhtml). */
     XHTML("xhtml", "application/xhtml+xml"),
 
-    /**
-     * MHTML Document (.mht).
-     */
+    /** MHTML Document (.mht). */
     MHT("mht", "application/x-mimearchive"),
 
-    /**
-     * application/xml (.xml).
-     */
+    /** application/xml (.xml). */
     XML("xml", "text/xml"),
 
-    /**
-     * Text (.txt).
-     */
+    /** Text (.txt). */
     TEXT_PLAIN("txt", "text/plain"),
 
-    /**
-     * Wordprocessing (.docx).
-     */
+    /** Wordprocessing (.docx). */
     WORD_PROCESSING_ML(
             "docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"),
 
-    /**
-     * Office Word Macro Enabled (.docm).
-     */
+    /** Office Word Macro Enabled (.docm). */
     OFFICE_WORD_MACRO_ENABLED(
             "docm",
             "application/vnd.ms-word.document.macroEnabled.12"),
 
-    /**
-     * Office Word Template (.dotx).
-     */
+    /** Office Word Template (.dotx). */
     OFFICE_WORD_TEMPLATE(
             "dotx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.template+xml"),
 
-    /**
-     * Office Word Macro Enabled Template (.dotm).
-     */
+    /** Office Word Macro Enabled Template (.dotm). */
     OFFICE_WORD_MACRO_ENABLED_TEMPLATE(
             "dotm",
             "application/vnd.ms-word.template.macroEnabled.12"),
 
-    /**
-     * Rich Text Foramt (.rtf).
-     */
+    /** Rich Text Foramt (.rtf). */
     RTF("rtf", "text/rtf"),
 
-    /**
-     * HyperText Markup Language File (.htm).
-     */
+    /** HyperText Markup Language File (.htm). */
     HTML("html", "text/html");
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -737,9 +725,10 @@ public static enum ImportFormatType {
      * Ermittelt das Import-Format anhand der Dateinamensendung im übergebenen Dateinamen/-pfad
      * unabhängig der Groß- und Kleinschreibung.
      *
-     * @param fileName Dateiname oder Dateipfad, darf nicht {@code null} sein.
+     * @param fileName      Dateiname oder Dateipfad, darf nicht {@code null} sein.
+     *
      * @return Wurde ein mögliches Format gefunden wird {@code Optional.of(..)}
-     * mit dem Enum-Wert zurückgegeben, ansonsten {@code Optional.empty()}.
+     *                      mit dem Enum-Wert zurückgegeben, ansonsten {@code Optional.empty()}.
      */
     public static Optional<ImportFormatType> byFileExtension(String fileName) {
         requireNonNull(fileName, "fileName");
@@ -760,7 +749,8 @@ public static enum ImportFormatType {
      *
      * <p>Verhält sich identisch zu: {@link #byFileExtension(String)}.</p>
      *
-     * @param filePath Dateipfad, darf nicht {@code null} sein.
+     * @param filePath      Dateipfad, darf nicht {@code null} sein.
+     *
      * @return Format oder {@code Optional.empty()}.
      */
     public static Optional<ImportFormatType> byFileExtension(Path filePath) {
@@ -785,7 +775,7 @@ public static enum ImportFormatType {
         return mimeType;
     }
 
-}
+    }
 
     priv
             *Interne Darstellung des erweiterten Wertes mit AltChunkID,gecachetem Dateiinhalt und
@@ -952,7 +942,7 @@ private static class EmptyAltChunkExtValue extends ExtendedValue {
     @Override
     public String toString() {
         return altString();
-    }
+        }
 
-}
+    }
 
