@@ -68,36 +68,36 @@ import static java.util.Objects.requireNonNull;
  * <p><b>Beispiel</b></p>
  * 
  * <pre>
- * //// Ausführliche Belegung unter Angabe des konkreten Formates
- *
- * final Path topText = Paths.get("C:\\DocumentParts\\InvoiceTopText.docx");
- * final Path bottomText = Paths.get("C:\\DocumentParts\\InvoiceBottomText.docx");
- *
- * // Funktioniert nur, wenn der Dateiname die korrekte Dateiendung beinhaltet, ansonsten
- * // müsste manuell der korrekte Formatwert vom Enum angegeben werden!
- * final ImportFormatType formatDocTop = ImportFormatType.byFileExtension(topText).get();
- * final ImportFormatType formatDocBottom = ImportFormatType.byFileExtension(bottomText).get();
- *
- * final DataPage page = new DataPage();
- * final ExtendedValue extValTop = MicrosoftInsertDoc.insertFile(topText, formatDocTop);
- * final ExtendedValue extValBot = MicrosoftInsertDoc.insertFile(bottomText, formatDocBottom);
- *
- * page.addValue(new DataValue("TopTextIns", extValTop));
- * page.addValue(new DataValue("BottomTextIns", extValBottom));
- *
- *
- * //// Alternativ ginge auch die Kurzform in der grundsätzlich davon ausgegangen wird, dass das
- * //// Dokumentformat anhand des Dateinamens korrekt erkannt werden kann.
- *
- * final Path topText = Paths.get("C:\\DocumentParts\\InvoiceTopText.docx");
- * final Path bottomText = Paths.get("C:\\DocumentParts\\InvoiceBottomText.docx");
- *
- * final DataPage page = new DataPage();
- *
- * page.addValue(new DataValue("TopTextIns", MicrosoftInsertDoc.insertFile(topText)));
- * page.addValue(new DataValue("BottomTextIns", MicrosoftInsertDoc.insertFile(bottomText)));
- * </pre>
- *
+ //// Ausführliche Belegung unter Angabe des konkreten Formates
+
+ final Path topText = Paths.get("C:\\DocumentParts\\InvoiceTopText.docx");
+ final Path bottomText = Paths.get("C:\\DocumentParts\\InvoiceBottomText.docx");
+
+ // Funktioniert nur, wenn der Dateiname die korrekte Dateiendung beinhaltet, ansonsten
+ // müsste manuell der korrekte Formatwert vom Enum angegeben werden!
+ final ImportFormatType formatDocTop = ImportFormatType.byFileExtension(topText).get();
+ final ImportFormatType formatDocBottom = ImportFormatType.byFileExtension(bottomText).get();
+
+ final DataPage page = new DataPage();
+ final ExtendedValue extValTop = MicrosoftInsertDoc.insertFile(topText, formatDocTop);
+ final ExtendedValue extValBot = MicrosoftInsertDoc.insertFile(bottomText, formatDocBottom);
+
+ page.addValue(new DataValue("TopTextIns", extValTop));
+ page.addValue(new DataValue("BottomTextIns", extValBottom));
+
+
+ //// Alternativ ginge auch die Kurzform in der grundsätzlich davon ausgegangen wird, dass das
+ //// Dokumentformat anhand des Dateinamens korrekt erkannt werden kann.
+
+ final Path topText = Paths.get("C:\\DocumentParts\\InvoiceTopText.docx");
+ final Path bottomText = Paths.get("C:\\DocumentParts\\InvoiceBottomText.docx");
+
+ final DataPage page = new DataPage();
+
+ page.addValue(new DataValue("TopTextIns", MicrosoftInsertDoc.insertFile(topText)));
+ page.addValue(new DataValue("BottomTextIns", MicrosoftInsertDoc.insertFile(bottomText)));
+ </pre>
+ * 
  * <p><b>Empfehlung bei Verwendung:</b> Wird ein Textbaustein innerhalb eines Dokumentes mehrfach
  * verwendet, dann ist es von Vorteil für die Ladezeit und Größe der späteren Datei, das die Instanz
  * von {@link ExtendedValue} nicht mehrfach erzeugt wird, sondern nach einmaliger Erzeugung mehrfach
@@ -161,8 +161,7 @@ public abstract class MicrosoftInsertDoc implements Extension {
     /**
      * Interner Konstruktor - nicht verwenden.
      */
-    protected MicrosoftInsertDoc() {
-    }
+    protected MicrosoftInsertDoc() { }
 
     /**
 
@@ -773,7 +772,7 @@ public static enum ImportFormatType {
      */
     protected String getMimeType() {
         return mimeType;
-    }
+        }
 
     }
 
@@ -941,7 +940,7 @@ private static class EmptyAltChunkExtValue extends ExtendedValue {
 
     @Override
     public String toString() {
-        return altString();
+            return altString();
         }
 
     }
