@@ -326,6 +326,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         
         if (thereIsNoDataRow) {
             // Keine Datenzeile vorhanden. Also kann die Ersetzung jener ausfallen.
+            removeTableElementIfZeroRows(tableNode);
             return;
         }
         
@@ -340,6 +341,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
         
         tableNode.removeChild(tableDataRow);
+        removeTableElementIfZeroRows(tableNode);
     }
     
     private boolean hasTableHeaderRows(Node tableNode) {
@@ -358,6 +360,24 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
         
         return false;
+    }
+    
+    /**
+     * Wenn nach dem Ersetzungsvorgang eine Tabelle gar keine Datenzeilen besitzt (also überhaupt
+     * keine Zeilen), sowohl keine Kopf wie Fußzeilen, dann erkennt diese Methode dies und entfernt
+     * die in Office eh nicht mehr sichtbare Tabelle auf XML Ebene komplett.
+     * 
+     * @param tableNode     Element {@code table:table}.
+     */
+    private void removeTableElementIfZeroRows(Node tableNode) {
+        final Element tableTable = (Element) tableNode;
+        final NodeList tableTableRowElements = tableTable.getElementsByTagName("table:table-row");
+        
+        if (tableTableRowElements.getLength() == 0) {
+            // Dann haben wir ein quasi leeres table:table Element (außergenommen paar anderer
+            // Defintionen die nicht sichtbar sind) und jenes Element entfernen wir gleich ganz.
+            tableTable.getParentNode().removeChild(tableTable);
+        }
     }
     
     private void replaceUserFieldNode(Node userFieldNode, DataValueMap values) {
