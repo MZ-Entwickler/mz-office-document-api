@@ -227,7 +227,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private void replaceDocumentTree(Node node, DataMap valueMap) {
-        replaceUserFieldsAndImages(node, valueMap);
+        replaceFieldsAndImages(node, valueMap);
         replaceTables(node, valueMap);
     }
     
@@ -246,13 +246,17 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
     }
     
-    private void replaceUserFieldsAndImages(Node documentBody, DataValueMap value) {
+    private void replaceFieldsAndImages(Node documentBody, DataValueMap value) {
         for (Node drawFrameNode : walkDrawFrames(documentBody)) {
             replaceDrawFrame((Element) drawFrameNode, value);
         }
         
         for (Node userFieldNode : walkUserFields(documentBody)) {
-            replaceUserFieldNode(userFieldNode, value);
+            replaceFieldNode(userFieldNode, value);
+        }
+        
+        for (Node placeholderNode : walkPlaceholders(documentBody)) {
+            replaceFieldNode(placeholderNode, value);
         }
     }
     
@@ -321,7 +325,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 continue;
             }
             
-            replaceUserFieldsAndImages(tableRows.get(i), tableData.get());
+            replaceFieldsAndImages(tableRows.get(i), tableData.get());
         }
         
         if (thereIsNoDataRow) {
@@ -380,7 +384,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
     }
     
-    private void replaceUserFieldNode(Node userFieldNode, DataValueMap values) {
+    private void replaceFieldNode(Node userFieldNode, DataValueMap values) {
         final String fieldName = getFieldName(userFieldNode).trim();
         final Optional<DataValue> value = values.getValueByKey(fieldName);
         
@@ -750,7 +754,19 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     }
     
     private String getFieldName(Node fieldNode) {
-        return getAttribute(fieldNode, "text:name");
+        final Element unknownElement = (Element) fieldNode;
+        final String elementName = unknownElement.getNodeName();
+        
+        if (elementName.equals("text:user-field-get")) {
+            return getAttribute(fieldNode, "text:name");
+        }
+        
+        if (elementName.equals("text:placeholder")) {
+            final String rawFieldName = getTextContent(fieldNode);
+            return rawFieldName.replace("<", "").replace(">", "");
+        }
+        
+        throw new IllegalStateException("(Internal) Unknown field type: " + elementName);
     }
     
     private String getTableName(Node tableNode) {
@@ -773,6 +789,11 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     
     private GenericNodeIterator walkDrawFrames(Node rootNode) {
         return new GenericNodeIterator(rootNode, "draw:frame")
+                .noRecursionByElements("table:table");
+    }
+    
+    private GenericNodeIterator walkPlaceholders(Node rootNode) {
+        return new GenericNodeIterator(rootNode, "text:placeholder")
                 .noRecursionByElements("table:table");
     }
 

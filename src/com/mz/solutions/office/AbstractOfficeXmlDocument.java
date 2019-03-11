@@ -492,6 +492,11 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     }
     
     protected String getAttribute(Node elementNode, String attributeName) {
+        if (elementNode instanceof Element) {
+            final String attrValue =  ((Element) elementNode).getAttribute(attributeName);
+            return (null == attrValue) ? "" : attrValue;
+        }
+        
         NamedNodeMap attrMap = elementNode.getAttributes();
         
         if (null == attrMap) {
