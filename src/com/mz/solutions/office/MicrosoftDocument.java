@@ -36,6 +36,7 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.hints.StandardFormatHint;
 import com.mz.solutions.office.model.images.ExternalImageResource;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageResourceType;
@@ -521,6 +522,10 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
                 subReplaceFieldWithImage(instrTextNode, extValue);
                 return;
             }
+            
+            if (null != extValue && extValue instanceof StandardFormatHint) {
+                
+            }
         }
         
         // w:instrText ersetzen durch w:t oder längerer Formatierungskette
@@ -640,14 +645,12 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     private void subReplaceFieldWithAltChunk(Node instrTextNode, ExtendedValue extValue) {
         // - instrTextNode -> Platzhalter vollständig (samt ABSATZ!) entfernen
+        //                    Macht #insertAltChunkAt() selbstständig.
         // - Weitere Behandlung an die Erweiterungsimplementierung geben
         final Node fieldParent = instrTextNode.getParentNode();
         final Node contentParent = fieldParent.getParentNode();
         
         extAltChunk.insertAltChunkAt(instrTextNode, extValue);
-        
-        // Jetzt erst entfernen
-        //contentParent.removeChild(fieldParent);
     }
     
     private Node createWordTextNode(Document document, String textContent) {
