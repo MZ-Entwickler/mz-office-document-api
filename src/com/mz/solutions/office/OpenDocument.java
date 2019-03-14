@@ -463,8 +463,11 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
                 // TODO Absatz als Hidden deklarieren
                 markStyleTextOrParagraphHiddenFor((Element) userFieldNode.getParentNode());
                 userFieldNode.getParentNode().removeChild(userFieldNode);
+                return;
             }
-            return;
+            
+            // TODO LO/AOO StandardFormatHint.TABLE_KEEP
+            // TODO LO/AOO StandardFormatHint.TABLE_REMOVE
         }
         
         if (null == dataValue) {
