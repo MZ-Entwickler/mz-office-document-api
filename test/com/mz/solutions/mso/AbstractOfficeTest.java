@@ -21,6 +21,10 @@
  */
 package com.mz.solutions.mso;
 
+import com.mz.solutions.office.OfficeDocument;
+import com.mz.solutions.office.OfficeDocumentFactory;
+import com.mz.solutions.office.model.DataPage;
+import com.mz.solutions.office.result.ResultFactory;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.Ignore;
@@ -30,5 +34,27 @@ public abstract class AbstractOfficeTest {
     
     protected static final Path ROOT_IN = Paths.get("test-templates");
     protected static final Path ROOT_OUT = ROOT_IN.resolve("output");
+    
+    protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve(docInput));
+        
+        document.generate(page, ResultFactory.toFile(
+                ROOT_OUT.resolve(docOutput)));
+    }
+    
+    protected final void processOpenDocument(DataPage page, String inFileName, String outFileName) {
+        processOpenDocument(page, Paths.get(inFileName), Paths.get(outFileName));
+    }
+    
+    protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve(docInput));
+        
+        document.generate(page, ResultFactory.toFile(
+                ROOT_OUT.resolve(docOutput)));
+    }
     
 }

@@ -32,6 +32,7 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.hints.StandardFormatHint;
 import com.mz.solutions.office.model.images.ExternalImageResource;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageResourceType;
@@ -41,6 +42,8 @@ import com.mz.solutions.office.model.interceptor.InterceptionContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -55,6 +58,7 @@ import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_FORMATTING_
 import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_PLACE_HOLDER;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -63,6 +67,17 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     private static final String ZIP_DOC_CONTENT = "content.xml";
     private static final String ZIP_DOC_STYLES = "styles.xml";
     private static final String ZIP_MANIFEST = "META-INF/manifest.xml";
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Eltern-Elemente welche als Absatz nach OASIS ODF 1-2 zu interpretieren sind.
+     * <p>Sowohl {@code text:p} wie auch {@code text:h} stellen Absatz-Elemente dar.</p>
+     */
+    private static final List<String> OASIS_ODF_PARAGRAPH_ELEMENTS = Collections.unmodifiableList(
+            Arrays.asList("text:p", "text:h"));
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     private final MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
@@ -407,6 +422,59 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             return;
         }
         
+        if (dataValue.isExtendedValue() && dataValue.extendedValue() instanceof StandardFormatHint) {
+            final StandardFormatHint formatHint = (StandardFormatHint) dataValue.extendedValue();
+            
+            if (formatHint.equals(StandardFormatHint.PARAGRAPH_KEEP)) {
+                // Okay, KEEP ist zwar dar, aber wir müssen nichts machen. Der Absatz soll ja
+                // bewusst stehen gelassen werden.
+                
+                userFieldNode.getParentNode().removeChild(userFieldNode);
+                return;
+            }
+            
+            if (formatHint.equals(StandardFormatHint.PARAGRAPH_REMOVE)) {
+                // Okay, wir müssen nicht unseren eigenen Platzhalter entfernen. Warum? Weil wir
+                // gleich den ganzen Absatz entfernen in dem jener steht. :-D
+                
+                Node currentNode = userFieldNode;
+                do {
+                    if (currentNode instanceof Element) {
+                        final Element anyElement = (Element) currentNode;
+                        final String elementName = anyElement.getNodeName();
+                        
+                        final boolean isParentParagraphElement =
+                                OASIS_ODF_PARAGRAPH_ELEMENTS.contains(elementName);
+                        
+                        if (isParentParagraphElement) {
+                            // Okay, gesuchtes Element IST das oberste Absatz-Element. Das fliegt
+                            // raus.
+                            anyElement.getParentNode().removeChild(anyElement);
+                            return;
+                        }
+                    }
+                    
+                    currentNode = currentNode.getParentNode();
+                } while (null != currentNode && isBodyElement(currentNode) == false);
+                return;
+            }
+            
+            if (formatHint.equals(StandardFormatHint.PARAGRAPH_HIDDEN)) {
+                // TODO Absatz als Hidden deklarieren
+                markStyleTextOrParagraphHiddenFor((Element) userFieldNode.getParentNode());
+                userFieldNode.getParentNode().removeChild(userFieldNode);
+            }
+            return;
+        }
+        
+        if (null == dataValue) {
+            // Wenn es ein ValueInterceptor war, dann darf der NIE null zurück geben. Pfff...
+            throw new DocumentPlaceholderMissingException(String.format(
+                    "Invalid return value (null!) from ValueInterceptor while processing DataValue Key: %s",
+                    fieldName));
+                    
+        }
+        
         final Set<ValueOptions> options = dataValue.getValueOptions();
         
         final boolean isSimpleText =
@@ -472,6 +540,83 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
         
         parentNode.removeChild(userFieldNode);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // FORMATIERUNGEN UND STYLE-MANAGEMENT
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private Element prepareStyleElementFor(Element anyStyledElement) {
+        final Element style = lookupStyleElementFor(anyStyledElement);
+        
+        final Element styleCopy = (Element) style.cloneNode(true);
+        final String attrStyleName = styleCopy.getAttribute("style:name");
+        final String newStyleName = attrStyleName + ".MZ";
+        
+        styleCopy.setAttribute("style:name", newStyleName);
+        styleCopy.removeAttribute("style:display-name");
+        
+        style.getParentNode().insertBefore(styleCopy, style);
+        
+        return styleCopy;
+    }
+    
+    private void markStyleTextOrParagraphHiddenFor(Element anyElement) {
+        final Element elStyleStyle = prepareStyleElementFor(anyElement);
+        final Element styleTextProperties = elementByTagName("style:text-properties", elStyleStyle).orElse(null);
+        
+        final String attrTextDisplay = styleTextProperties.getAttribute("text:display");
+        if (null != attrTextDisplay && attrTextDisplay.isEmpty() == false) {
+            return;
+        }
+        
+        styleTextProperties.setAttribute("text:display", "none");
+        anyElement.setAttribute("text:style-name", elStyleStyle.getAttribute("style:name"));
+    }
+    
+    private Element lookupStyleElementFor(Element anyElement) {
+        final String styleName = lookupStyleNameFor(anyElement);
+        assert null != styleName : "null == styleName";
+        final NodeList styleStyleList = anyElement.getOwnerDocument()
+                .getElementsByTagName("style:style");
+        
+        for (int i = 0; i < styleStyleList.getLength(); i++) {
+            final Element styleStyle = (Element) styleStyleList.item(i);
+            final String attrStyleName = styleStyle.getAttribute("style:name");
+            
+            if (styleName.equals(attrStyleName)) {
+                return styleStyle;
+            }
+        }
+        
+        return null;
+    }
+    
+    private String lookupStyleNameFor(Element anyElement) {
+        // Weg 1:   Es handelt sich um die Standardfälle:
+        //          text:style-name
+        //          table:style-name
+        final String attrTextStyleName = anyElement.getAttribute("text:style-name");
+        if (null != attrTextStyleName && attrTextStyleName.isEmpty() == false) {
+            return attrTextStyleName;
+        }
+        
+        final String attrTableStyleName = anyElement.getAttribute("table:style-name");
+        if (null != attrTableStyleName && attrTableStyleName.isEmpty() == false) {
+            return attrTableStyleName;
+        }
+        
+        // Weg 2:   Wir suchen nach einem Attribut mit dem Muster *:style-name
+        final NamedNodeMap attrMap = anyElement.getAttributes();
+        for (int i = 0; i < attrMap.getLength(); i++) {
+            final String attrName = attrMap.item(i).getNodeName();
+            
+            if (attrName.endsWith(":style-name")) {
+                return attrMap.item(i).getNodeValue();
+            }
+        }
+        
+        return null;
     }
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -767,6 +912,11 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         }
         
         throw new IllegalStateException("(Internal) Unknown field type: " + elementName);
+    }
+    
+    private boolean isBodyElement(Node anyNode) {
+        if (anyNode instanceof Element == false) return false;
+        return "office:body".equals(anyNode.getNodeName());
     }
     
     private String getTableName(Node tableNode) {
