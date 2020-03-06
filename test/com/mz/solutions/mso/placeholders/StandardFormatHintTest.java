@@ -36,8 +36,11 @@ public final class StandardFormatHintTest extends AbstractOfficeTest {
                 "StandardFormatHint_LibreOffice_Output.odt");
     }
     
+    @Test
     public void testFile_StandardFormatHint_MicrosoftOffice_docx() {
-        
+        processWordDocument(
+                createDataPage(), "StandardFormatHint_MicrosoftWord.docx",
+                "StandardFormatHint_MicrosoftWord_Output.docx");
     }
     
     private DataPage createDataPage() {
@@ -47,6 +50,9 @@ public final class StandardFormatHintTest extends AbstractOfficeTest {
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_1", StandardFormatHint.PARAGRAPH_KEEP));
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_2", StandardFormatHint.PARAGRAPH_HIDDEN));
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_3", StandardFormatHint.PARAGRAPH_REMOVE));
+        
+        page.addValue(new DataValue("FORMAT_HINT_TABLE_KEEP", StandardFormatHint.TABLE_KEEP));
+        page.addValue(new DataValue("FORMAT_HINT_TABLE_REMOVE", StandardFormatHint.TABLE_REMOVE));
         
         return page;
     }

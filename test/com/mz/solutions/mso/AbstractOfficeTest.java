@@ -57,4 +57,8 @@ public abstract class AbstractOfficeTest {
                 ROOT_OUT.resolve(docOutput)));
     }
     
+    protected final void processWordDocument(DataPage page, String inFileName, String outFileName) {
+        processWordDocument(page, Paths.get(inFileName), Paths.get(outFileName));
+    }
+    
 }

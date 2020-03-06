@@ -507,7 +507,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         interceptionContext.init(keyName, values);
         
         // Sonderfall: Ist der zurückgegebene DataValue ein erweiterter Wert, dann muss mindestens
-        // geprüft werden ob diese Art und bekannt ist.
+        // geprüft werden ob diese Art uns bekannt ist.
         final DataValue dataValue = handleInterception(value.get(), interceptionContext);
         if (dataValue.isExtendedValue()) {
             final ExtendedValue extValue = dataValue.extendedValue();
@@ -524,7 +524,12 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             }
             
             if (null != extValue && extValue instanceof StandardFormatHint) {
-                
+                final boolean success = subReplaceFieldWithFormatHint(instrTextNode, extValue);
+                if (success) {
+                    // Nur wenn erfolgreich, ansonsten greift der Standard-Ersetzungsprozess
+                    // weiter unten.
+                    return;
+                }
             }
         }
         
@@ -648,7 +653,6 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         //                    Macht #insertAltChunkAt() selbstständig.
         // - Weitere Behandlung an die Erweiterungsimplementierung geben
         final Node fieldParent = instrTextNode.getParentNode();
-        final Node contentParent = fieldParent.getParentNode();
         
         extAltChunk.insertAltChunkAt(instrTextNode, extValue);
     }
@@ -722,6 +726,285 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             tableParent.removeChild(tableNode);
         }
     }
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // HANDLING OF STANDARDFORMATHINT'S
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Ersetzt den Platzhalter durch nichts, führt aber die Formatierungs-Empfehlung aus.
+     * 
+     * @param instrTextNode XML Node des Platzhalters.
+     * 
+     * @param extValue      Erweiterter Wert vom Typ {@link StandardFormatHint}.
+     * 
+     * @return              wenn {@code true}, dann wurde der Vorgang ausgeführt und die Ersetzung
+     *                      erfolgte. Wenn {@code false} wurde nichts gemacht.
+     */
+    private boolean subReplaceFieldWithFormatHint(Node instrTextNode, ExtendedValue extValue) {
+        final StandardFormatHint formatHint = (StandardFormatHint) extValue;
+
+        if (formatHint.equals(StandardFormatHint.PARAGRAPH_KEEP)) {
+            // Absatz soll bleiben. Nun nur den Platzhalter und die { Klammern } entfernen
+            // dann sollte das passen.
+            final Element wordR = (Element) instrTextNode.getParentNode();
+            final Element wordP = (Element) wordR.getParentNode();
+
+            // Erst vor und hinter uns die MERGEFIELD Klammern entfernen...
+            removeEnclosingFieldChars(wordR);
+
+            // dann auch uns selbst.
+            wordP.removeChild(wordR);
+            return true;
+        }
+
+        if (formatHint.equals(StandardFormatHint.PARAGRAPH_HIDDEN)) {
+            //  <w:p w:rsidR="009B0BC6" w:rsidRDefault="009B0BC6">
+            //      <w:r>
+            //          <w:t>TEXT</w:t>
+            //      </w:r>
+            //      <w:r>
+            //          <w:fldChar w:fldCharType="begin"/>
+            //      </w:r>
+            //      <w:r>
+            //          <w:instrText xml:space="preserve"> MERGEFIELD ANY_OTHER_VALUE </w:instrText>
+            //      </w:r>
+            //      <w:r>
+            //          <w:fldChar w:fldCharType="end"/>
+            //      </w:r>
+            //      <w:r>
+            //          <w:t>MORE TEXT.</w:t>
+            //      </w:r>
+            //      <w:r>
+            //          <w:fldChar w:fldCharType="begin"/>
+            //      </w:r>
+            //      <w:r>                                   // >> wird an [Pos. 1] entfernt
+            //          <w:instrText xml:space="preserve"> MERGEFIELD PLACEHOLDER </w:instrText>
+            //      </w:r>
+            //      <w:r>
+            //          <w:fldChar w:fldCharType="end"/>
+            //      </w:r>
+            //    </w:p>
+            
+            // 1. MERGEFIELD entfernen
+            // Absatz soll bleiben. Nun nur den Platzhalter und die { Klammern } entfernen
+            // dann sollte das passen.
+            final Document document = instrTextNode.getOwnerDocument();
+            final Element wordRun = (Element) instrTextNode.getParentNode();
+            final Element wordP = (Element) wordRun.getParentNode();
+
+            // Erst vor und hinter uns die MERGEFIELD Klammern entfernen...
+            removeEnclosingFieldChars(wordRun);
+
+            // dann auch uns selbst.  [Pos. 1]
+            wordP.removeChild(wordRun);
+            
+            //  <w:p w:rsidR="009B0BC6" w:rsidRDefault="009B0BC6">
+            //      <w:r>                                   // >> wordRunArray[0]
+            //          <w:t>TEXT</w:t>
+            //      </w:r>
+            //      <w:r>                                   // >> wordRunArray[1]
+            //          <w:fldChar w:fldCharType="begin"/>
+            //      </w:r>
+            //      <w:r>                                   // >> wordRunArray[2]
+            //          <w:instrText xml:space="preserve"> MERGEFIELD ANY_OTHER_VALUE </w:instrText>
+            //      </w:r>
+            //      <w:r>                                   // >> wordRunArray[3]
+            //          <w:fldChar w:fldCharType="end"/>
+            //      </w:r>
+            //      <w:r>                                   // >> wordRunArray[4]
+            //          <w:t>MORE TEXT.</w:t>
+            //      </w:r>
+            //      <w:r>                                   // >> wordRunArray[5]
+            //          <w:fldChar w:fldCharType="begin"/>
+            //      </w:r>
+            //      ... w:r wurde durch [Pos. 1] entfernt
+            //      <w:r>                                   // >> wordRunArray[6]
+            //          <w:fldChar w:fldCharType="end"/>
+            //      </w:r>
+            //    </w:p>
+
+            // Platzhalter ist weg, nun den Absatz und die Word-Runs _alle_ aufsammeln
+            // welche sich im Absatz befinden und jeweils HIDDEN (vanished) setzen.
+            // 3. Absatz-Properties suchen/erstellen
+            final Element[] wordRunArray = streamElements(wordP)
+                    .filter(e -> e.getNodeName().equals("w:r"))
+                    .map(Element.class::cast)
+                    .toArray(Element[]::new);
+
+            // Erst wird Word-Run Elemente
+            Arrays.asList(wordRunArray).forEach(this::applyHiddenMarkToWordRunOrP);
+            
+            // Und dann den eigenen Absatz
+            applyHiddenMarkToWordRunOrP(wordP);
+
+            return true;
+        }
+
+        if (formatHint.equals(StandardFormatHint.PARAGRAPH_REMOVE)) {
+            final Document document = instrTextNode.getOwnerDocument();
+            final Element wordR = (Element) instrTextNode.getParentNode();
+            final Element wordP = (Element) wordR.getParentNode();
+
+            // Einfach beim Eltern-Element vom Absatz (w:p) entfernen.
+            final Node parentOfParagraph = wordP.getParentNode();
+            if (null != parentOfParagraph) {
+                parentOfParagraph.removeChild(wordP);
+            }
+
+            // Sonderfall Tabellen-Zellen:
+            //   Wenn der Absatz einer Tabellenzelle entfernt wird und es sich um den
+            //   letzten überlebenden Mohikaner ähh Absatz in dieser Zelle handelte, dann 
+            //   muss wieder ein leere Absatz eingefügt werden. Leere Zellen ohne Absatz 
+            //   sind in WordML nicht zullässig.
+            final Element wordTableCell = (Element) parentOfParagraph;
+            if (null != wordTableCell && wordTableCell.getNodeName().equals("w:tc")) {
+                final boolean anyParagraphExists =
+                        elementByTagName("w:p", wordTableCell).isPresent();
+
+                if (anyParagraphExists == false) {
+                    final Element newWordP = document.createElement("w:p");
+                    wordTableCell.appendChild(newWordP);
+                }
+            }
+            
+            return true;
+        }
+        
+        if (formatHint.equals(StandardFormatHint.TABLE_KEEP)) {
+            // Tabelle soll bleiben. Nun nur den Platzhalter und die { Klammern } entfernen
+            // dann sollte das passen. In einer späteren Zelle kann natürlich trotzdem der Befehl
+            // kommen die Tabelle zu entfernen.
+            
+            final Element wordR = (Element) instrTextNode.getParentNode();
+            final Element wordP = (Element) wordR.getParentNode();
+
+            // Erst vor und hinter uns die MERGEFIELD Klammern entfernen...
+            removeEnclosingFieldChars(wordR);
+
+            // dann auch uns selbst.
+            wordP.removeChild(wordR);
+            return true;
+        }
+        
+        if (formatHint.equals(StandardFormatHint.TABLE_REMOVE)) {
+            final boolean removalSuccessful = removeParentTableFor((Element) instrTextNode);
+            
+            if (removalSuccessful) {
+                // Tabelle gefunden. Tabelle elimiert. Auftrag erfüllt. Veni, vidi, vici.
+                return true;
+            } else {
+                // Tabelle nicht gefunden. Wie normalen leeren Platzhalter behandeln.
+                return false;
+            }
+        }
+        
+        return false;
+    }
+    
+    private void applyHiddenMarkToWordRunOrP(Element elWordRunOrParagraph) {
+        final boolean isParagraphElement = elWordRunOrParagraph.getNodeName().equals("w:p");
+        final boolean isWordRunElement = elWordRunOrParagraph.getNodeName().equals("w:r");
+
+        if (isParagraphElement) {
+            applyHiddenMarkToElement_WordParagraph(elWordRunOrParagraph);
+            
+        } else if (isWordRunElement) {
+            applyHiddenMarkToElement_WordRun(elWordRunOrParagraph);
+        } else {
+            // shit :-D
+        }
+    }
+    
+    private void applyHiddenMarkToElement_WordParagraph(Element wordP) {
+        final Document d = wordP.getOwnerDocument();
+        
+        //  <w:p w14:paraId="697CBD5B">                     // >> Element wordP
+        //      <w:pPr>                                     // >> get/create element
+        //          <w:rPr>                                 // >> lassen wir durch andere Methode machen
+        //              <w:vanish/>
+        //          </w:rPr>
+        //      </w:pPr>
+        //      ... andere Kontent ...
+        //  </w:p>
+        
+        final Element wordParaPr = elementByTagName("w:pPr", wordP)
+                .orElse((Element) wordP.insertBefore(d.createElement("w:pPr"), wordP.getFirstChild()));
+        
+        applyHiddenMarkToElement_Any(wordParaPr);
+    }
+    
+    private void applyHiddenMarkToElement_WordRun(Element wordR) {
+        applyHiddenMarkToElement_Any(wordR);
+    }
+    
+    private void applyHiddenMarkToElement_Any(Element element) {
+        final Document d = element.getOwnerDocument();
+        
+        //  <w:r w:rsidRPr="00D1458A">                      // >> kann auch ein abweichendes Element sein
+        //      <w:rPr>                                     // >> w:rPr suchen/einfügen
+        //          <w:vanish/>                             // >> w:vanish setzen
+        //      </w:rPr>                                    // >> w:rPr
+        //      <w:t>TEXT OR OTHER</w:t>
+        //  </w:r>
+        
+        final Element wordRunPr = elementByTagName("w:rPr", element)
+                .orElse((Element) element.insertBefore(d.createElement("w:rPr"), element.getFirstChild()));
+        
+        final boolean isVanished = elementByTagName("w:vanish", wordRunPr).isPresent();
+        if (isVanished == false) {
+            // dann werden wir das jetzt ändern.
+            wordRunPr.appendChild(d.createElement("w:vanish"));
+        }
+    }
+
+    /**
+     * Entfernt die umgebende Tabelle vom übergeben Element soweit eine Tabelle überhaupt existiert.
+     * 
+     * @param anyWordElement    Irgendein XML Element das sich innerhalb einer Tabelle befindet.
+     * 
+     * @return                  {@code true}, wenn mit Erfolg die Tabelle entfernt wurde.
+     *                          {@code false}, wenn es nicht gelang oder keine Tabelle existiert.
+     */
+    private boolean removeParentTableFor(Element anyWordElement) {
+        // Das übergebene Element (anyWordElement) wird nicht entfernt, da es bereits in der Tabelle
+        // ist, welche im Gesamten entfernt wird.
+        //
+        // Wir gehen den XML Baum soweit hoch, bis wir <w:tbl> ... </w:tbl> finden. Der ganze XML
+        // Tag wird einfach entfernt. Finden wir keine Tabelle, 
+        
+        Node parentNode = anyWordElement.getParentNode();
+        while (null != parentNode && "w:tbl".equals(parentNode.getNodeName()) == false) {
+            // Solange es immer weiter hoch geht, und nicht w:tbl erreicht wurde.
+            if (parentNode instanceof Document) {
+                // Am Ende des möglich/machbaren. Keine Tabelle gefunden.
+                return false;
+            }
+            
+            if (parentNode.getNodeType() == Node.ELEMENT_NODE) {
+                final String elementName = parentNode.getNodeName();
+                
+                if ("w:body".equals(elementName) || "w:document".equals(elementName)) {
+                    // Zuuu weit; keine Tabelle gefunden.
+                    return false;
+                }
+            }
+            
+            parentNode = parentNode.getParentNode();
+        }
+        
+        if (null == parentNode) {
+            return false;
+        }
+        
+        // Halt stop. <w:tbl> gefunden.
+        final Element wTbl = (Element) parentNode;
+        final Element wTblParent = (Element) wTbl.getParentNode();
+        
+        wTblParent.removeChild(wTbl);
+        return true;
+    }
+    
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // HANDLING VON BILDERN IN WORD-DOKUMENTEN
