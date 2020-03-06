@@ -276,6 +276,10 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         for (Node placeholderNode : walkPlaceholders(documentBody)) {
             replaceFieldNode(placeholderNode, value);
         }
+        
+        for (Node databaseNode : walkDatabaseDisplayFields(documentBody)) {
+            replaceFieldNode(databaseNode, value);
+        }
     }
     
     private void replaceUnknownTable(Node tableNode, DataMap values) {
@@ -945,6 +949,10 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             return rawFieldName.replace("<", "").replace(">", "");
         }
         
+        if (elementName.equals("text:database-display")) {
+            return getAttribute(fieldNode, "text:column-name");
+        }
+        
         throw new IllegalStateException("(Internal) Unknown field type: " + elementName);
     }
     
@@ -980,6 +988,12 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
         return new GenericNodeIterator(rootNode, "text:placeholder")
                 .noRecursionByElements("table:table");
     }
+    
+    private GenericNodeIterator walkDatabaseDisplayFields(Node rootNode) {
+        return new GenericNodeIterator(rootNode, "text:database-display")
+                .noRecursionByElements("table:table");
+    }
+    
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // INTERCEPTION CONTEXT FÜR DIE VERWENDUNG VON VALUE-INTERCEPTOR'S
