@@ -403,8 +403,13 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             final boolean isUnkownTable = tableName.isPresent() == false;
             
             if (isUnkownTable) {
-                // Unbekannte Tabellen werden mit selben Daten befüllt
-                replaceFields(tableNode, values);
+                // Unbekannte Tabellen werden mit selben Daten befüllt, dabei müssen wir das erste
+                // w:tbl Element überspringen.
+                final List<Node> wTblNodeList = toFlatNodeList(tableNode.getChildNodes());
+                
+                for (Node childNode : wTblNodeList) {
+                    replaceAllFields(childNode, values);
+                }
             } else {
                 // Bekannte Tabellen werden korrekt mit den Datenzeilen befüllt
                 final Optional<DataTable> tableValues =
