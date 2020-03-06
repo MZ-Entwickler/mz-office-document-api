@@ -3,8 +3,8 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2019,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -52,7 +52,7 @@ import static mz.solutions.office.resources.MessageResources.formatMessage;
  * wie möglich beibehalten.</p>
  * 
  * @date        2015-03-10
- * @author      Riebe, Moritz       (moritz.riebe@mz-solutions.de)
+ * @author      Riebe, Moritz       (moritz.riebe@mz-entwickler.de)
  * @author      Zaschka, Andreas    (andreas.zaschka@mz-solutions.de)
  */
 final class ZIPDocumentFile {

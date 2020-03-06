@@ -3,8 +3,8 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2019,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -38,7 +38,7 @@ import javax.annotation.Nullable;
  * Intern - Basisimplementierung zum Speichern und Abfragen von
  * Bezeichner-Werte-Paaren und Untertabellen.
  * 
- * @author  Riebe, Moritz   (moritz.riebe@mz-solutions.de)
+ * @author  Riebe, Moritz   (moritz.riebe@mz-entwickler.de)
  */
 abstract class AbstractDataSet implements Serializable {
     
