@@ -82,6 +82,8 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     private final MyInterceptionContext interceptionContext = new MyInterceptionContext();
     
     private volatile int imageCounter = 16_000;
+    private int styleCounter = 0;
+    
     private volatile Map<ImageResource, String> cacheImageResources = new IdentityHashMap<>();
     
     public OpenDocument(OfficeDocumentFactory factory, Path document) {
@@ -96,6 +98,7 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     @Override
     protected void createAndFillDocument(Iterator<DataPage> dataPages) {
         this.imageCounter = 16_000;
+        this.styleCounter = 0;
         this.cacheImageResources.clear();
         
         try {
@@ -460,14 +463,36 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
             }
             
             if (formatHint.equals(StandardFormatHint.PARAGRAPH_HIDDEN)) {
-                // TODO Absatz als Hidden deklarieren
                 markStyleTextOrParagraphHiddenFor((Element) userFieldNode.getParentNode());
                 userFieldNode.getParentNode().removeChild(userFieldNode);
                 return;
             }
             
-            // TODO LO/AOO StandardFormatHint.TABLE_KEEP
-            // TODO LO/AOO StandardFormatHint.TABLE_REMOVE
+            if (formatHint.equals(StandardFormatHint.TABLE_KEEP)) {
+                // Alles bleibt beim Alten, nur unseren eigenen Platzhalter entfernen.
+                userFieldNode.getParentNode().removeChild(userFieldNode);
+                return;
+            }
+            
+            if (formatHint.equals(StandardFormatHint.TABLE_REMOVE)) {
+                Node parentNode = userFieldNode.getParentNode();
+                while (null != parentNode && "table:table".equals(parentNode.getNodeName()) == false) {
+                    if (parentNode instanceof Document) {
+                        parentNode = null;
+                        break;
+                    }
+                    
+                    parentNode = parentNode.getParentNode();
+                }
+                
+                if (null != parentNode) {
+                    final Element tableTable = (Element) parentNode;
+                    final Element tableTableParent = (Element) tableTable.getParentNode();
+                    
+                    tableTableParent.removeChild(tableTable);
+                    return;
+                }
+            }
         }
         
         if (null == dataValue) {
@@ -549,17 +574,23 @@ final class OpenDocument extends AbstractOfficeXmlDocument {
     // FORMATIERUNGEN UND STYLE-MANAGEMENT
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private String incrementedStyleSuffix() {
+        styleCounter++;
+        return ".MZ.SCOPY" + styleCounter;
+    }
+    
     private Element prepareStyleElementFor(Element anyStyledElement) {
         final Element style = lookupStyleElementFor(anyStyledElement);
         
         final Element styleCopy = (Element) style.cloneNode(true);
         final String attrStyleName = styleCopy.getAttribute("style:name");
-        final String newStyleName = attrStyleName + ".MZ";
+        final String newStyleName = attrStyleName + incrementedStyleSuffix();
         
         styleCopy.setAttribute("style:name", newStyleName);
         styleCopy.removeAttribute("style:display-name");
         
         style.getParentNode().insertBefore(styleCopy, style);
+        style.getParentNode().insertBefore(style, styleCopy);
         
         return styleCopy;
     }
