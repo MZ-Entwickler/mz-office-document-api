@@ -1,35 +1,25 @@
-Sorry if you don't speak German. We've tried to keep some comments of our examples (GettingStarted,
-JUnit, JavaDoc and here) in English. Well... perhaps we will translate all documentation sometime.
-If you have questions, just write me. :-)
-
 # MZ Office Document API
-Bibliothek zum Ausfüllen von DOCX (Microsoft Word ab 2007) und ODT (Open-/LibrOffice) Dokumenten
-die Platzhalter oder Tabellen (auch ineinander verschachtelte Tabellen) beinhalten.
+Library to fill out Libre-/OpenOffice (odt) and Microsoft Word Documents (docx; starting with Word 2007) containing place holders and nested Tables.
+The data model is independent of the resulting document format.
+The library is not intended to create documents from scratch, instead to work with templates with placeholders.
 
-Zur Erstellung der Dokumente wird ein einheitliches Daten-Modell (`com.mz.solutions.office.model`)
-verwendet, das unabhängig des Dokumenten-Formates (docx/odt) verwendbar ist.
+By using an abstract model layer (`com.mz.solutions.office.model`),
+both formats (docx/odt) can be used by the same code base.
 
-Für Microsoft Word liegt eine Erweiterung vor zur Nutzung von Custom XML Parts mit denen
-Word-Dokumente XML gemapped werden können.
+For Microsoft Word there are some extensions to use Custom XML Parts.
 
 ## Lizenz
-Die Bibliothek ist unter den Bedingungen der Affero General Public License Version 3 (AGPL v3)
-frei verfügbar und verwendbar.
+Affero General Public License Version 3 (AGPL v3)
 
 ## Abhängigkeiten
-- _Runtime_: Es werden keine Abhängigkeiten zur Laufzeit benötigt/verwendet. No depandancies at runtime needed.
-- _Compile_: JSR 305 (Annotations for Software Defect Detection). Die entsprechende JAR findet
-  sich im _third-party_ Verzeichnis.
-- _Test_: JUnit 4.0 und hamcrest-core 1.0. Beides liegt im _third-party_ Verzeichnis vor.
+- _Runtime_: No dependencies at runtime needed
+- _Compile_: JSR 305 (Annotations for Software Defect Detection)
+- _Test_: JUnit 5
 
-Es wird Java 1.8 benötigt.
+The project needs Java 1.8
 
-# Beispiele
-Im Verzeichnis `examples` findest du min. ein Beispiel, dessen Code kommentiert ist. Ansonsten
-müssten die JavaDoc-Kommentare (inkl. Package-Infos) doch recht ausführlich sein.
-
-__Grundsätzlich__ sollte die JavaDoc-Doku  mehr als ausreichend und genau sein. Wenn du dir nicht nur
-die Klassen anschaust, sondert auch die Package-Infos, dann ist dies doch relativ viel. :-)
+# Examples
+In the directory `examples` there are some example projects. Further information can be found in the java doc.
 
 # Einstieg - com.mz.solutions.office
 Jeder Vorgang zum Befüllen von Textdokumenten (*.odt, *.docx, *.doct) bedarf eines
@@ -42,10 +32,10 @@ Alle Dokumente werden auf dem selben Weg geöffnet. Ist das zugrunde liegende Of
 (ODT oder DOCX) bereits vor dem Öffnen bekannt, kann die konrekte Implementierung gewählt werden.
 
 ```java
-  // für Libre/ Apache OpenOffice
+  // for Libre/ Apache OpenOffice
   OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
  
-  // für Microsoft Office (ab 2007)
+  // for Microsoft Office (starting with 2007)
   OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
 ```
 
@@ -57,7 +47,7 @@ eigenes Format handelt.
   Optional<Office> docFactory = OfficeDocumentFactory.newInstanceByDocumentType(anyDocument);
  
   if (docFactory.isPresent() == false) {
-      throw new IllegalStateException("Unbekanntes Format");
+      throw new IllegalStateException("unknown format");
   }
 ```
 
