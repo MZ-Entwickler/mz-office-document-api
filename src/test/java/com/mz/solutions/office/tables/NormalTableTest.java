@@ -151,14 +151,14 @@ public class NormalTableTest extends AbstractTableTest {
     }
 
 
-    @Test
+    /*@Test
     public void testFile_MinorBugFix_EmptyTableZeroRows_docx() {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(
                 ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx"));
 
         document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.docx")));
+                TESTS_OUTPUT_PATH.resolve("MinorBugFix_EmptyTableZeroRows_Output.docx")));
     }
 
     @Test
@@ -168,8 +168,8 @@ public class NormalTableTest extends AbstractTableTest {
                 ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt"));
 
         document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.odt")));
-    }
+                TESTS_OUTPUT_PATH.resolve("MinorBugFix_EmptyTableZeroRows_Output.odt")));
+    }*/
 
     private DataPage createDataPage() {
         final DataPage page = new DataPage();

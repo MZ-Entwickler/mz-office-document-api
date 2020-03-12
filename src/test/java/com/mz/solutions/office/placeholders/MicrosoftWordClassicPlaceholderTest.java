@@ -30,15 +30,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public final class MicrosoftWordClassicPlaceholderTest extends AbstractClassPlaceholderTest {
-    
+
+    protected final Path docFile = Paths.get(
+            AbstractClassPlaceholderTest.class.getResource("Word_Placeholders.docx").getPath());
+
     @Test
     public void testFile_Word_Placeholders_docx() {
-        final Path docFile = Paths.get("Word_Placeholders.docx");
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(ROOT_IN.resolve(docFile));
-        
+        final OfficeDocument document = docFactory.openDocument(docFile);
+
         document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("Word_Placeholders_Output.docx")));
+                TESTS_OUTPUT_PATH.resolve("Word_Placeholders_Output.docx")));
     }
     
 }

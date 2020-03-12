@@ -24,21 +24,30 @@ package com.mz.solutions.office.placeholders;
 import com.mz.solutions.office.OfficeDocument;
 import com.mz.solutions.office.OfficeDocumentFactory;
 import com.mz.solutions.office.result.ResultFactory;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public final class LibreOfficeClassicPlaceholderTest extends AbstractClassPlaceholderTest {
-    
-    @Test
-    public void testFile_LibreOffice_PlaceholdersAndUserDefiniedFields_odt() {
-        final Path docFile = Paths.get("LibreOffice_PlaceholdersAndUserDefiniedFields.odt");
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(ROOT_IN.resolve(docFile));
-        
-        document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("LibreOffice_PlaceholdersAndUserDefiniedFields_Output.odt")));
+
+    @Nested
+    class LibreOffice {
+
+        protected final Path docFile = Paths.get(
+                AbstractClassPlaceholderTest.class.getResource(
+                        "LibreOffice_PlaceholdersAndUserDefiniedFields.odt").getPath());
+
+        @Test
+        public void placeholdersAndUserDefinedFields() {
+
+            final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
+            final OfficeDocument document = docFactory.openDocument(docFile);
+
+            document.generate(createDataPage(), ResultFactory.toFile(
+                    TESTS_OUTPUT_PATH.resolve("LibreOffice_PlaceholdersAndUserDefiniedFields_Output.odt")));
+        }
     }
-    
+
 }

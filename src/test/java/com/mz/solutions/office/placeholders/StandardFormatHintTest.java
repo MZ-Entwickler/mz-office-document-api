@@ -21,26 +21,35 @@
  */
 package com.mz.solutions.office.placeholders;
 
-import com.mz.solutions.office.model.hints.*;
 import com.mz.solutions.office.AbstractOfficeTest;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
+import com.mz.solutions.office.model.hints.StandardFormatHint;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public final class StandardFormatHintTest extends AbstractOfficeTest {
     
     @Test
     public void testFile_StandardFormatHint_LibreOffice_odt() {
-        processOpenDocument(
-                createDataPage(), "StandardFormatHint_LibreOffice.odt",
-                "StandardFormatHint_LibreOffice_Output.odt");
+
+        Path docFile = Paths.get(
+                AbstractClassPlaceholderTest.class.getResource(
+                        "StandardFormatHint_LibreOffice.odt").getPath());
+
+        processOpenDocument(createDataPage(), docFile, "StandardFormatHint_LibreOffice_Output.odt");
     }
     
     @Test
     public void testFile_StandardFormatHint_MicrosoftOffice_docx() {
-        processWordDocument(
-                createDataPage(), "StandardFormatHint_MicrosoftWord.docx",
-                "StandardFormatHint_MicrosoftWord_Output.docx");
+
+        Path docFile = Paths.get(
+                AbstractClassPlaceholderTest.class.getResource(
+                        "StandardFormatHint_MicrosoftWord.docx").getPath());
+
+        processWordDocument(createDataPage(), docFile, "StandardFormatHint_MicrosoftWord_Output.docx");
     }
     
     private DataPage createDataPage() {
