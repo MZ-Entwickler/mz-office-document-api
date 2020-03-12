@@ -33,22 +33,9 @@ import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.DataValueMap;
 import com.mz.solutions.office.model.images.ImageResourceType;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.util.Arrays;
-import static java.util.Collections.disjoint;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -58,16 +45,19 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.CREATION_FAILED;
-import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.IMPL_NAME_ERR;
-import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
-import static mz.solutions.office.resources.MessageResources.formatMessage;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
+import static java.util.Collections.disjoint;
+import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.*;
 
 abstract class AbstractOfficeXmlDocument extends OfficeDocument {
 

@@ -25,42 +25,19 @@ import com.mz.solutions.office.OfficeDocumentException.DocumentPlaceholderMissin
 import com.mz.solutions.office.OfficeDocumentException.NoDataForDocumentGenerationException;
 import com.mz.solutions.office.extension.ExtendedValue;
 import com.mz.solutions.office.instruction.DocumentInterceptor;
-import com.mz.solutions.office.model.DataMap;
-import com.mz.solutions.office.model.DataPage;
-import com.mz.solutions.office.model.DataTable;
-import com.mz.solutions.office.model.DataTableRow;
-import com.mz.solutions.office.model.DataValue;
-import com.mz.solutions.office.model.DataValueMap;
-import com.mz.solutions.office.model.ValueOptions;
+import com.mz.solutions.office.model.*;
 import com.mz.solutions.office.model.hints.StandardFormatHint;
-import com.mz.solutions.office.model.images.ExternalImageResource;
-import com.mz.solutions.office.model.images.ImageResource;
-import com.mz.solutions.office.model.images.ImageResourceType;
-import com.mz.solutions.office.model.images.ImageValue;
-import com.mz.solutions.office.model.images.LocalImageResource;
+import com.mz.solutions.office.model.images.*;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
+import org.w3c.dom.*;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import static mz.solutions.office.resources.MessageResources.formatMessage;
-import static mz.solutions.office.resources.OpenDocumentKeys.NO_DATA;
-import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_FORMATTING_CHAR;
-import static mz.solutions.office.resources.OpenDocumentKeys.UNKNOWN_PLACE_HOLDER;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import java.util.*;
+
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
+import static mz.solutions.office.resources.OpenDocumentKeys.*;
 
 final class OpenDocument extends AbstractOfficeXmlDocument {
     

@@ -22,9 +22,10 @@
 package com.mz.solutions.office;
 
 import java.io.IOException;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import java.nio.file.Path;
-import static mz.solutions.office.resources.MessageResources.formatMessage;
+
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static mz.solutions.office.resources.OpenDocumentFactoryKeys.NOT_ACCESSIBLE;
 
 /**

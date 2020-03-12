@@ -22,26 +22,19 @@
 package com.mz.solutions.office;
 
 import com.mz.solutions.office.OfficeDocumentException.InvalidDocumentFormatForImplementation;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
-import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import static java.util.stream.Collectors.toList;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
-import static mz.solutions.office.resources.MessageResources.formatMessage;
+
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Öffnet (im RAM!), klont und speichert (packt) ZIP Dateien unter den

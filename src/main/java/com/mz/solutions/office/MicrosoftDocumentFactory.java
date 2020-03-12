@@ -21,10 +21,12 @@
  */
 package com.mz.solutions.office;
 
+import com.mz.solutions.office.resources.MessageResources;
+
 import java.io.IOException;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import java.nio.file.Path;
-import mz.solutions.office.resources.MessageResources;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static mz.solutions.office.resources.MicrosoftDocumentFactoryKeys.NOT_ACCESSIBLE;
 
 final class MicrosoftDocumentFactory extends OfficeDocumentFactory {
