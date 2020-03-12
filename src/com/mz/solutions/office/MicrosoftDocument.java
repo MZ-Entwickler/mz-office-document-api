@@ -21,6 +21,7 @@
  */
 package com.mz.solutions.office;
 
+import static com.mz.solutions.office.MicrosoftDocumentContentTypes.ZIP_CONTENT_TYPES;
 import com.mz.solutions.office.OfficeDocumentException.DocumentPlaceholderMissingException;
 import com.mz.solutions.office.OfficeDocumentException.NoDataForDocumentGenerationException;
 import com.mz.solutions.office.extension.ExtendedValue;
@@ -75,11 +76,17 @@ import org.w3c.dom.NodeList;
 
 final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
-    private static final String ZIP_DOC_DOCUMENT = "word/document.xml";
-    private static final String ZIP_DOC_STYLES = "word/styles.xml";
-    private static final String ZIP_REL_RELS = "word/_rels/document.xml.rels";
+    /**
+     * Enthält eine Liste aller zulässigen "Besitzer" (Eltern) von {@code w:p} Absatz-Elementen in
+     * Word ML - um jeweils den höchsten XML Tag feststellen zu können, bis zu dem Ersetzungen im
+     * jeweiligen Kontext überhaupt möglich sind.
+     */
+    private static final List<String> WML_ALLOWED_PARAGRPAH_PARENTS =
+            Collections.unmodifiableList(Arrays.asList(
+                    "w:body", "w:comment", "w:docPartBody", "w:endnote",
+                    "w:footnote", "w:ftr", "w:hdr", "w:tc"));
     
-    private static final String ZIP_CONTENT_TYPES = "[Content_Types].xml";
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     /**
      * Speichert die Referenz wenn die Custom XML Erweiterung verwendet wurde;
@@ -90,6 +97,9 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
     
     /** Speichert die Referenz zur altChunk-Erweiterung, sobald diese verwendet wurde. */
     private InnerAltChunkExtension extAltChunk = new InnerAltChunkExtension();
+    
+    /** Speichert nur für den Ersetzungsvorgang den Zuordnung zu den Dateien. */
+    private MicrosoftDocumentContentTypes contentTypes;
 
     /** Interceptor-Context für Lazy-Callbacks, wird bei jedem Platzhaler neu initialisiert. */
     private MyInterceptionContext interceptionContext = new MyInterceptionContext();
@@ -165,11 +175,18 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         this.imageCounter = 16_000;
         this.cacheImageResources.clear();
         
-        final Document newContent = (Document) getDocumentPart(ZIP_DOC_DOCUMENT);
-        final Document newStyles = (Document) getDocumentPart(ZIP_DOC_STYLES);
-        
-        final Document newRelationships = (Document) getDocumentPart(ZIP_REL_RELS);
         final Document newContentTypes = (Document) getDocumentPart(ZIP_CONTENT_TYPES);
+        
+        contentTypes = new MicrosoftDocumentContentTypes(newContentTypes);
+        
+        final String partDocumentContent = contentTypes.getPathForMainDocument();
+        final String partDocumentStyles = contentTypes.getPathForMainStyles();
+        final String partRelationships = contentTypes.getPathForMainDocumentRelations();
+        
+        final Document newContent = (Document) getDocumentPart(partDocumentContent);
+        final Document newStyles = (Document) getDocumentPart(partDocumentStyles);
+        
+        final Document newRelationships = (Document) getDocumentPart(partRelationships);
         
         extAltChunk.setCurrentZipFile(getNewDocumentFile())
                 .setRelationshipDocument(newRelationships)
@@ -185,12 +202,19 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             newWordBody.removeChild(newWordBody.getFirstChild());
         }
         
+        DataPage firstDataPage = null;  // wird später gesetzt mit der ersten Seite
+        
         boolean firstPage = true;
         boolean missingData = true;
         
         while (dataPages.hasNext()) {
             final DataPage pageData = dataPages.next();
             final Node newPageBody = wordBody.cloneNode(true);
+            
+            if (null == firstDataPage) {
+                // Noch null? Dann einmalig mit der ersten DataPage belegen.
+                firstDataPage = pageData;
+            }
             
             // Zeilenumbruch nur Einfügen, wenn es sich NICHT um die
             // Seite handelt
@@ -221,6 +245,11 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             firstPage = false;
         }
         
+        // Muss ausgeführt werden bevor Bild-Resourcen gelöscht werden und bevor das Dokument
+        // abgebrochen wird wegen fehlender DataPage's, da ggf. keine DataPage übermittelt wird für
+        // das Hauptdokument, aber eventuell für Kopf- und/oder Fußzeilen.
+        processHeaderFooterInstructions();
+        
         if (missingData) {
             if (ignoreMissingDataPages()) {
                 return; // Leise beenden
@@ -229,6 +258,10 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             throw new NoDataForDocumentGenerationException(
                     formatMessage(MicrosoftDocumentKeys.NO_DATA));
         }
+        
+        // Footnotes und Endnotes nur ausfüllen, wenn wir mindestens eine DataPage bekommen haben,
+        // da für diese zwei Bereiche keine extra DataPage übermittelt wird.
+        processFootnotesAndEndnotes(firstDataPage);
         
         final Node wordBodyParent = wordBody.getParentNode();
         wordBodyParent.insertBefore(newWordBody, wordBody);
@@ -247,16 +280,138 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         }
     }
     
+    private void processHeaderFooterInstructions() {
+        if (hasHeaderFooterInstructions() == false) return;
+        
+        final String[] headerPartNames = contentTypes.getPathsForHeaders();
+        for (String headerPartName : headerPartNames) {
+            processHeaderFooterPart(headerPartName);
+        }
+        
+        final String[] footerPartNames = contentTypes.getPathsForFooters();
+        for (String footerPartName : footerPartNames) {
+            processHeaderFooterPart(footerPartName);
+        }
+    }
+    
+    private void processHeaderFooterPart(String headerFooterPartName) {
+        final Document docHeaderFooter = getDocumentPart(headerFooterPartName);
+        
+        final int wHdrElementCount = docHeaderFooter.getElementsByTagName("w:hdr").getLength();
+        final boolean isHeader = wHdrElementCount > 1;
+        
+        // headerFooterPartName kann z.B. bei Kopzeile sein: 'word/header1.xml'
+        // headerFooterPartName kann z.B. bei Fußzeile sein: 'word/footer1.xml'
+        final String name = headerFooterPartName.substring(
+                headerFooterPartName.indexOf('/') + 1,  // nach dem Slash
+                headerFooterPartName.indexOf(".xml"));  // bis zu '.xml'
+        
+        final Element elHdrFtr;
+        if (isHeader) {
+            elHdrFtr = (Element) docHeaderFooter.getElementsByTagName("w:hdr").item(0);
+        } else {
+            elHdrFtr = (Element) docHeaderFooter.getElementsByTagName("w:ftr").item(0);
+        }
+        
+        replaceHeaderFooterElement(elHdrFtr, isHeader, name);
+    }
+    
+    private void replaceHeaderFooterElement(Element wHdrOrWFtr, boolean isHeader, String name) {
+        final Optional<DataMap<?>> optionalData = callHeaderFooterInstruction(name, isHeader);
+        final DataMap<?> values;
+        
+        if (null != optionalData && optionalData.isPresent()) {
+            values = optionalData.get();
+        } else {
+            // Ohne Werte, gibt es auch nichts zu ersetzen.
+            return;
+        }
+        
+        replaceAllFields(wHdrOrWFtr, values);
+        removeAllBookmarkTags(wHdrOrWFtr);
+    }
+    
+    private void processFootnotesAndEndnotes(DataPage dataPage) {
+        //// FOOTNOTES ////
+        //  <w:footnotes mc:Ignorable="w14 w15 w16se w16cid wp14">      // [wFootnotes]
+        //      <w:footnote w:type="separator" w:id="-1">               // JE W:FOOTNOTE EINE ERSETZUNG STARTEN [wFootnoteList]
+        //          <w:p w14:paraId="3CB90767" w14:textId="77777777" w:rsidR="00EE42E3" w:rsidRDefault="00EE42E3" w:rsidP="007E79F2">
+        //              ... <w:r><w:separator/></w:r> ...
+        //          </w:p>
+        //      </w:footnote>
+        //      <w:footnote w:type="continuationSeparator" w:id="0">
+        //          <w:p w14:paraId="263A89F2" w14:textId="77777777" w:rsidR="00EE42E3" w:rsidRDefault="00EE42E3" w:rsidP="007E79F2">
+        //              ... <w:r><w:continuationSeparator/></w:r> ...
+        //          </w:p>
+        //      </w:footnote>
+        //      <w:footnote w:id="1">                                   // [wFootnote[2]]
+        //          <w:p w14:paraId="0B9232B8" w14:textId="4154E0DC" w:rsidR="00636562" w:rsidRDefault="00636562">
+        //              ... <w:r><w:footnoteRef/></w:r>
+        //              ... <w:r><w:t xml:space="preserve"> Fussnote Nummer 1</w:t></w:r> ...
+        //          </w:p>
+        //      </w:footnote>
+        //  </w:footnotes>
+        final String[] footnotesPartName = contentTypes.getPathsForFootnotes();
+        for (String singleFootnotesPartName : footnotesPartName) {
+            final Document docFootnotes = getDocumentPart(singleFootnotesPartName);
+            final Element wFootnotes = docFootnotes.getDocumentElement();
+            
+            final List<Node> wFootnoteList = nodesByTagName("w:footnote", wFootnotes);
+            
+            for (Node wFootnote : wFootnoteList) {
+                replaceAllFields(wFootnote, dataPage);
+            }
+            
+            removeAllBookmarkTags(docFootnotes);
+        }
+        
+        //// ENDNOTES ////
+        //  <w:endnotes mc:Ignorable="w14 w15 w16se w16cid wp14">
+        //      <w:endnote w:type="separator" w:id="-1">                // JE W:ENDNOTE EINE ERSETZUNG STARTEN
+        //          <w:p w14:paraId="35AC7757" w14:textId="77777777" w:rsidR="00EE42E3" w:rsidRDefault="00EE42E3" w:rsidP="007E79F2">
+        //              ... <w:r><w:separator/></w:r> ...
+        //          </w:p>
+        //      </w:endnote>
+        //      <w:endnote w:type="continuationSeparator" w:id="0">
+        //          <w:p w14:paraId="0DA0FFE6" w14:textId="77777777" w:rsidR="00EE42E3" w:rsidRDefault="00EE42E3" w:rsidP="007E79F2">
+        //              ... <w:r><w:continuationSeparator/></w:r> ...
+        //          </w:p>
+        //      </w:endnote>
+        //      <w:endnote w:id="1">
+        //          <w:p w14:paraId="47215F68" w14:textId="043D26A3" w:rsidR="00636562" w:rsidRDefault="00636562">
+        //              ...
+        //              <w:bookmarkStart w:id="0" w:name="_GoBack"/>    // TEXTMARKEN MÜSSEN ENTFERNT WERDEN
+        //              <w:bookmarkEnd w:id="0"/>
+        //              ...
+        //          </w:p>
+        //      </w:endnote>
+        //  </w:endnotes>
+        
+        final String[] endnotesPartName = contentTypes.getPathsForEndnotes();
+        for (String singleEndnotesPartName : endnotesPartName) {
+            final Document docEndnotes = getDocumentPart(singleEndnotesPartName);
+            final Element wEndnotes = docEndnotes.getDocumentElement();
+            
+            final List<Node> wEndnoteList = nodesByTagName("w:endnote", wEndnotes);
+            
+            for (Node wEndnote : wEndnoteList) {
+                replaceAllFields(wEndnote, dataPage);
+            }
+            
+            removeAllBookmarkTags(wEndnotes);
+        }
+    }
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////
     
     @Override
     protected String normalizePartName(String inputPartName) {
         if (DocumentInterceptor.GENERIC_PART_BODY.equals(inputPartName)) {
-            return ZIP_DOC_DOCUMENT;
+            return this.contentTypes.getPathForMainDocument();
         }
         
         if (DocumentInterceptor.GENERIC_PART_STYLES.equals(inputPartName)) {
-            return ZIP_DOC_STYLES;
+            return this.contentTypes.getPathForMainStyles();
         }
         
         return inputPartName;
@@ -989,7 +1144,8 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             if (parentNode.getNodeType() == Node.ELEMENT_NODE) {
                 final String elementName = parentNode.getNodeName();
                 
-                if ("w:body".equals(elementName) || "w:document".equals(elementName)) {
+                final boolean isEndOfContent = WML_ALLOWED_PARAGRPAH_PARENTS.contains(elementName);
+                if (isEndOfContent) {
                     // Zuuu weit; keine Tabelle gefunden.
                     return false;
                 }

@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import static java.util.Collections.disjoint;
 import java.util.HashMap;
@@ -491,6 +492,14 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         return Optional.empty();
     }
     
+    protected List<Node> nodesByTagName(String elementName, Node elementNode) {
+        if (elementNode instanceof Element == false) {
+            throw new IllegalStateException("internal error anyNode != type Element");
+        }
+        
+        return toFlatNodeList(((Element) elementNode).getElementsByTagName(elementName));
+    }
+    
     protected String getAttribute(Node elementNode, String attributeName) {
         if (elementNode instanceof Element) {
             final String attrValue =  ((Element) elementNode).getAttribute(attributeName);
@@ -543,7 +552,7 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
     }
     
     protected List<Node> toFlatNodeList(NodeList nodeList) {
-        final List<Node> result = new LinkedList<>();
+        final List<Node> result = new ArrayList<>(nodeList.getLength());
         
         for (int i = 0; i < nodeList.getLength(); i++) {
             result.add(nodeList.item(i));
