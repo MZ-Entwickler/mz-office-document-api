@@ -3,19 +3,19 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de),
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
- *
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,14 +28,13 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageValue;
+import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
 import com.mz.solutions.office.model.images.UnitOfLength;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
-
-import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
 
 abstract class AbstractImageTest extends AbstractOfficeTest {
 

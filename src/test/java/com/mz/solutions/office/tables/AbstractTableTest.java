@@ -3,9 +3,9 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de),
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
- *
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or

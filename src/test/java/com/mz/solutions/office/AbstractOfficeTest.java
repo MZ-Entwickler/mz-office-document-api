@@ -21,9 +21,16 @@
  */
 package com.mz.solutions.office;
 
+import com.mz.solutions.office.model.DataPage;
+import com.mz.solutions.office.result.ResultFactory;
+
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public abstract class AbstractOfficeTest {
+
+    protected static final Path ROOT_IN = Paths.get("test-templates");
+    protected static final Path ROOT_OUT = ROOT_IN.resolve("output");
 
     protected Path outputPathOf(Path inputPath) {
 
@@ -53,6 +60,32 @@ public abstract class AbstractOfficeTest {
         } else {
             return inputPath.resolveSibling(nameWithoutExtension + "_Output" + "_" + suffix + extension);
         }
+    }
+
+    protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve(docInput));
+
+        document.generate(page, ResultFactory.toFile(
+                ROOT_OUT.resolve(docOutput)));
+    }
+
+    protected final void processOpenDocument(DataPage page, String inFileName, String outFileName) {
+        processOpenDocument(page, Paths.get(inFileName), Paths.get(outFileName));
+    }
+
+    protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve(docInput));
+
+        document.generate(page, ResultFactory.toFile(
+                ROOT_OUT.resolve(docOutput)));
+    }
+
+    protected final void processWordDocument(DataPage page, String inFileName, String outFileName) {
+        processWordDocument(page, Paths.get(inFileName), Paths.get(outFileName));
     }
 
 }

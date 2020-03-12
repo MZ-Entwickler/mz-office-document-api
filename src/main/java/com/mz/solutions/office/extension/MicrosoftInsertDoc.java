@@ -3,8 +3,8 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de)
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -28,12 +28,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
+
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
 import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
-import static com.mz.solutions.office.resources.MessageResources.formatMessage;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -110,51 +111,51 @@ import org.w3c.dom.NodeList;
  * der Absatz vorhanden oder über {@link #insertNoFile()} kann auch der Absatz mit entfernt werden
  * bei dem keine Einfügeoperation vorgenommen werden soll.</p>
  * 
- * @author Riebe, Moritz (moritz.riebe@mz-solutions.de)
+ * @author Riebe, Moritz (moritz.riebe@mz-entwickler.de)
  */
 public abstract class MicrosoftInsertDoc implements Extension {
     
-    /*
+    /**
      * Liste aller Unterstüzten Formate die eingefügt/importiert werden können.
      */
     public static enum ImportFormatType {
         
-        /* Extensible HyperText Markup Language File (.xhtml). */
+        /** Extensible HyperText Markup Language File (.xhtml). */
         XHTML ("xhtml", "application/xhtml+xml"),
         
-        /* MHTML Document (.mht). */
+        /** MHTML Document (.mht). */
         MHT ("mht", "application/x-mimearchive"),
         
-        /* application/xml (.xml). */
+        /** application/xml (.xml). */
         XML ("xml", "text/xml"),
         
-        /* Text (.txt). */
+        /** Text (.txt). */
         TEXT_PLAIN ("txt", "text/plain"),
         
-        /* Wordprocessing (.docx). */
+        /** Wordprocessing (.docx). */
         WORD_PROCESSING_ML (
                 "docx",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"),
         
-        /* Office Word Macro Enabled (.docm). */
+        /** Office Word Macro Enabled (.docm). */
         OFFICE_WORD_MACRO_ENABLED (
                 "docm",
                 "application/vnd.ms-word.document.macroEnabled.12"),
         
-        /* Office Word Template (.dotx). */
+        /** Office Word Template (.dotx). */
         OFFICE_WORD_TEMPLATE (
                 "dotx",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.template+xml"),
         
-        /* Office Word Macro Enabled Template (.dotm). */
+        /** Office Word Macro Enabled Template (.dotm). */
         OFFICE_WORD_MACRO_ENABLED_TEMPLATE (
                 "dotm",
                 "application/vnd.ms-word.template.macroEnabled.12"),
         
-        /* Rich Text Foramt (.rtf). */
+        /** Rich Text Foramt (.rtf). */
         RTF ("rtf", "text/rtf"),
         
-        /* HyperText Markup Language File (.htm). */
+        /** HyperText Markup Language File (.htm). */
         HTML ("html", "text/html");
         
         ////////////////////////////////////////////////////////////////////////////////////////////
@@ -317,16 +318,16 @@ public abstract class MicrosoftInsertDoc implements Extension {
      */
     private static class AltChunkExtValue extends ExtendedValue {
         
-        /* Pfad zum einfügenden Dokument. */
+        /** Pfad zum einfügenden Dokument. */
         private final Path importFile;
         
-        /* Formattyp (unabhängig der Dateiendung). */
+        /** Formattyp (unabhängig der Dateiendung). */
         private final ImportFormatType format;
         
-        /* UUID wird als ChunkID verwendet um grundsätzlich Eindeutigkeit zu bekommen. */
+        /** UUID wird als ChunkID verwendet um grundsätzlich Eindeutigkeit zu bekommen. */
         private final UUID chunkUID;
         
-        /* Ist nach dem ersten Laden mit dem Teildokument belegt und dann non-null. */
+        /** Ist nach dem ersten Laden mit dem Teildokument belegt und dann non-null. */
         @Nullable
         private transient byte[] cachedDocument;
 

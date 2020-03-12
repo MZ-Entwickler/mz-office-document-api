@@ -3,19 +3,19 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de),
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
- *
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -24,14 +24,14 @@
  * Schnittstelle zum Öffnen und Befüllen von Dokumenten/ Reports für Apache
  * OpenOffice und Microsoft Office; hier die Package-Beschreibung lesen für den Einstieg
  * zur Nutzung dieser API/Bibliothek.
- *
+ * 
  * <p><b>Einstieg:</b><br>
  * Jeder Vorgang zum Befüllen von Textdokumenten (*.odt, *.docx, *.doct) bedarf
  * eines Dokumenten-Daten-Modelles das im Unterpackage {@code 'model'} zu finden
  * ist. Nach dem Erstellen/ Zusammensetzen des Modelles oder laden aus externen
  * Quellen, kann in weiteren Schritten mit diesem Package ein beliebiges
  * Dokument befüllt werden. <br><br></p>
- *
+ * 
  * <p><b>Öffnen von Dokumenten:</b><br>
  * Alle Dokumente werden auf dem selben Weg geöffnet. Ist das zugrunde liegende
  * Office-Format {@code (ODT oder DOCX)} bereits vor dem Öffnen bekannt, kann
@@ -39,7 +39,7 @@
  * <pre>
  *  // für Libre/ Apache OpenOffice
  *  OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
- *
+ * 
  *  // für Microsoft Office (ab 2007)
  *  OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
  * </pre>
@@ -48,7 +48,7 @@
  * <pre>
  *  Path anyDocument = Paths.get("unknownFormat.blob");
  *  Optional&lt;Office&gt; docFactory = OfficeDocumentFactory.newInstanceByDocumentType(anyDocument);
- *
+ * 
  *  if (docFactory.isPresent() == false) {
  *      throw new IllegalStateException("Unbekanntes Format");
  *  }
@@ -57,7 +57,7 @@
  * Angabe der Dateinamenserweiterung. Die {@link OfficeDocumentFactory} und
  * deren konkrete Implementierung erfüllt immer das Dokumenten-Daten-Modell
  * vollständig.<br><br></p>
- *
+ * 
  * <p><b>Konfiguration der Factory:</b><br>
  * Mögliche Konfigurationseigenschaften die für alle Implementierungen gültig
  * sind finden sich in {@link OfficeProperty}; Implementierungs-spezifische
@@ -70,7 +70,7 @@
  *  // (Boolean.TRUE ist bereits die Standardbelegung und muss eigentlich
  *  // nicht explizit gesetzt werden)
  *  docFactory.setProperty(OfficeProperty.ERR_ON_MISSING_VAL, Boolean.TRUE);
- *
+ * 
  *  // Selbst wenn die aktuell hinter docFactory stehende Implementierung für
  *  // OpenOffice ist, können für den Fall auch die Microsoft Office
  *  // Einstellungen hinterlegt/ eingerichtet werden. Jede Implementierung
@@ -85,17 +85,17 @@
  * <pre>
  *  Path invoiceDocumentPath = Paths.get("invoice-template.any");
  *  Path invoiceOutput = Paths.get("INVOICE-2015-SCHMIDT.DOCX");
- *
+ * 
  *  DataPage reportData = .... // siehe 'model' Package
- *
+ * 
  *  OfficeDocumentFactory docFactory = OfficeDocumentFactory
  *          .newInstanceByDocumentType(invoiceDocumentPath)
  *          .orElseThrow(IllegalStateException::new);
- *
+ * 
  *  OfficeDocument invoiceDoc = docFactory.openDocument(invoiceDocumentPath);
  *  invoiceDoc.generate(reportData, ResultFactory.toFile(invoiceOutput));
  * </pre>
- *
+ * 
  * <p><b>[Spezifisch] Apache OpenOffice und LibreOffice:</b><br>
  * <i>Platzhalter</i> sind in OpenOffice "Varibalen" vom Typ "Benutzerdefinierte
  * Felder"  (Variables "User Fields") und findet sich im Dialog "Felder", unter
@@ -109,13 +109,13 @@
  * Wert belassen sondern aus dem Dokument entfernt. Die <u>umgebende</u>
  * Schriftformatierung von Platzhaltern wird im Ausgabedokument beibehalten.
  * <br><br>
- * <i>Seitenumbrüche</i> sind in OpenOffice nie hart-kodiert (im Gegensatz zu
+<i>Seitenumbrüche</i> sind in OpenOffice nie hart-kodiert (im Gegensatz zu
  * Microsoft Office) und ergeben sich lediglich aus den Formatierungsangaben
  * von Absätzen. Soll nach jeder {@link com.mz.solutions.office.model.DataPage}
- * ein Seitenumbruch erfolgen, muss im aller ersten Absatz des Dokumentes
+ * ein Seitenumbruch erfolgen, muss im aller ersten Absatz des Dokumentes 
  * eingestellt sein, das (Paragraph -&gt; Text Flow -&gt; Breaks) vor dem Absatz
- * immer ein Seitenumbruch zu erfolgen hat. Ansonsten werden alle
- * {@link com.mz.solutions.office.model.DataPage}s nur hintereinander angefügt
+ * immer ein Seitenumbruch zu erfolgen hat. Ansonsten werden alle 
+ * {@link com.mz.solutions.office.model.DataPage}s nur hintereinander angefügt 
  * ohne gewünschten Seitenumbruch.<br><br>
  * <i>Tabellenbezeichung</i> wird in OpenOffice direkt in den Eigenschaften
  * der Tabelle unter "Name" hinterlegt. Der Name muss in Großbuchstaben
@@ -125,7 +125,7 @@
  * Siehe dazu Abschnitt Dokumenten-Anweisungen.<br><br>
  * Es werden ODF Dateien ab Version 1.1 unterstützt; nicht zu verwechseln mit
  * der OpenOffice Versionummerierung.<br><br></p>
- *
+ * 
  * <p><b>[Spezifisch] Microsoft Office:</b><br>
  * <i>Platzhalter</i> sind Feldbefehle und ensprechen den normalen Platzhaltern
  * in Word ({@code MERGEFIELD}). Die Groß- und Kleinschreibung ist dabei
@@ -159,7 +159,7 @@
  * Word-bekannte Feldbefehle enthalten.<br><br>
  * Word-Dokumente ab Version 2007 im Open XML Document Format ({@code DOCX})
  * werden unterstützt.</p>
- *
+ * 
  * <p><b>Umgang mit dem Einsetzen/Ersetzen von Bildern in Dokumenten:</b><br>
  * Bilder können in Vorlage-Dokumenten eingesetzt sowie durch andere ersetzt werden. Bei
  * Text-Platzhaltern (MergeFields bei Microsoft, User-Def-Fields bei Libre/Openoffice), wird bei
@@ -171,52 +171,52 @@
  * Vorlage bereits existierende Bilder, werden als Platzhalter erkannt, wenn dem Bild in der
  * Vorlage in den Eigenschaften [Titel, Name, Beschreibung, Alt-Text] ein bekannter Platzhalter
  * mit Bild-Wert angegeben wurde. Genaueres ist den folgenden Klassen zu entnehmen:</p>
- *
+ * 
  * <pre>
  *  {@link com.mz.solutions.office.model.images.ImageResource}
  *  Bild-Datei/-Resource (Bild als Byte-Array mit Angabe des Formates)
- *
+ * 
  *  {@link com.mz.solutions.office.model.images.ImageValue}
  *  Bild-Wert (Resource) mit weiteren Angaben wie Titel (optional), Beschreibung (optional)
  *  und anzuwendende Abmaße.
  * </pre>
- *
+ * 
  * <p>Ein Bild-Wert ({@link com.mz.solutions.office.model.images.ImageValue}) besitzt eine
  * zugeordnete Bild-Resource ({@link com.mz.solutions.office.model.images.ImageResource}). Eine
  * Bild-Resource kann mehrfach/gleichzeitig in mehreren Bild-Werten verwendet werden.
  * Das Wiederverwenden von Bild-Resourcen führt zu deutlich kleineren Ergebnis-Dokumenten. Jene
  * Bild-Resource wird dann nur einmalig im Ergebnis-Dokument eingebettet.</p>
- *
+ * 
  * <pre>
  *  // Create or load Image-Resources. Try to reuse resources to reduce the file size of the
  *  // result documents. Internally image resources cache the file content.
  *  ImageResource imageData1 = ImageResource.loadImage(
  *          Paths.get("image_1.png"), StandardImageResourceType.PNG);
- *
+ * 
  *  ImageResource imageData2 = ImageResource.loadImage(
  *          Paths.get("image_2.bmp"), StandardImageResourceType.BMP);
- *
+ * 
  *  ImageValue image1Small = new ImageValue(imageData1)
  *          .setDimension(0.5D, 0.5D, UnitOfLength.CENTIMETERS)     // default 3cm x 1cm
  *          .setTitle("Image Title")                                // optional
  *          .setDescription("Alternative Text Description");        // optional
- *
+ * 
  *  ImageValue image1Large = new ImageValue(imageData1) // same image as image1Small (sharing res.)
  *          .setDimension(15, 15, UnitOfLength.CENTIMETERS);
- *
+ * 
  *  ImageValue image2 = new ImageValue(imageData2)
  *          .setDimension(40, 15, UnitOfLength.MILLIMETERS)
  *          .setOverrideDimension(true);
- *
+ * 
  *  // Assigning ImageValue's to DataValue's
  *  final DataPage page = new DataPage();
- *
+ * 
  *  page.addValue(new DataValue("IMAGE_1_SMALL", image1Small));
  *  page.addValue(new DataValue("IMAGE_1_LARGE", image1Large));
  *  page.addValue(new DataValue("IMAGE_2", image2));
  *  page.addValue(new DataValue("IMAGE_B", image2)); // ImageValue's are reusable
  * </pre>
- *
+ * 
  * <p><b>Dokument-Anweisungen mit
  * {@link com.mz.solutions.office.instruction.DocumentProcessingInstruction} übergeben:</b><br>
  * Dem Ersetzungs-Vorgang können weitere Anweisungen/Callbacks mit übergeben werden. Derzeit
@@ -228,32 +228,32 @@
  * Alle Anweisungen können erstellt werden über die vereinfachten Factory-Methoden in
  * {@link com.mz.solutions.office.instruction.DocumentProcessingInstruction} oder händisch durch
  * Implementieren der jeweiligen Klassen.</p>
- *
+ * 
  * <p>Kopf- und Fußzeilen werden (derzeit) nur bei {@code ODT} Dokumente unterstützt.</p>
  * <pre>
  *  // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
  *  final OfficeDocument anyDocument = ...
- *
+ * 
  *  final DataPage documentData = ...
  *  final DataPage headerData = ...     // Header und Footer replacement only for ODT-Files
  *  final DataPage footerData = ...
- *
+ * 
  *  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
  *          DocumentProcessingInstruction.replaceHeaderWith(headerData),
  *          DocumentProcessingInstruction.replaceFooterWith(footerData));
  * </pre>
- *
+ * 
  * <p>Document-Interceptors werden bei beiden Office-Implementierungen unterstützt.</p>
  * <pre>
  *  final DocumentInterceptorFunction interceptorFunction = ...
  *  final DocumentInterceptorFunction changeCustomXml = (DocumentInterceptionContext context) -&gt; {
  *      final Document xmlDocument = context.getXmlDocument();
  *      final NodeList styleNodes = xmlDocument.getElementsByTagName("custXml:customers");
- *
+ * 
  *      // add/remove/change XML document
  *      // 'context' should contain all data and access you will need
  *  };
- *
+ * 
  *  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
  *          // Intercept main document part (document body)
  *          DocumentProcessingInstruction.interceptDocumentBody(
@@ -268,7 +268,7 @@
  *                  "word/custom/custPropItem.xml", // our Custom XML data
  *                  DocumentInterceptorType.AFTER_GENERATION, // before or after doesn't matter
  *                  changeCustomXml));
- *
+ *          
  * </pre>
  */
 package com.mz.solutions.office;

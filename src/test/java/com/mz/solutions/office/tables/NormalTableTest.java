@@ -3,9 +3,9 @@
  *
  * Moritz Riebe und Andreas Zaschka GbR
  *
- * Copyright (C) 2018,   Moritz Riebe     (moritz.riebe@mz-solutions.de),
- *                       Andreas Zaschka  (andreas.zaschka@mz-solutions.de)
- *
+ * Copyright (C) 2020,   Moritz Riebe     (moritz.riebe@mz-entwickler.de)
+ *                       Andreas Zaschka  (andreas.zaschka@mz-entwickler.de)
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -150,6 +150,27 @@ public class NormalTableTest extends AbstractTableTest {
                 ResultFactory.toFile(outputPathOf(NORMAL_TABLES_ODT)));
     }
 
+
+    @Test
+    public void testFile_MinorBugFix_EmptyTableZeroRows_docx() {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx"));
+
+        document.generate(createDataPage(), ResultFactory.toFile(
+                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.docx")));
+    }
+
+    @Test
+    public void testFile_MinorBugFix_EmptyTableZeroRows_odt() {
+        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
+        final OfficeDocument document = docFactory.openDocument(
+                ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt"));
+
+        document.generate(createDataPage(), ResultFactory.toFile(
+                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.odt")));
+    }
+
     private DataPage createDataPage() {
         final DataPage page = new DataPage();
 
@@ -161,6 +182,7 @@ public class NormalTableTest extends AbstractTableTest {
         page.addTable(createSimpleTable());
         page.addTable(createOneRowTable());
         page.addTable(createEmptyTable());
+        page.addTable(createEmptyZeroRowTable());
         page.addTable(createFullTable());
         page.addTable(createEmptyTable2());
 
@@ -206,6 +228,11 @@ public class NormalTableTest extends AbstractTableTest {
                 new DataValue("VALUE_2", "PAGE.T_ONE_ROW.ROW[1].VALUE_2"),
                 new DataValue("VALUE_3", "PAGE.T_ONE_ROW.ROW[1].VALUE_3")));
 
+        return table;
+    }
+
+    private DataTable createEmptyZeroRowTable() {
+        final DataTable table = new DataTable("T_EMPTY_TABLE");
         return table;
     }
 
