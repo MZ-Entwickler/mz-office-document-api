@@ -1,4 +1,5 @@
 # MZ Office Document API
+![](https://img.shields.io/badge/maven-0.8.0-green)  
 Library to fill out Libre-/OpenOffice (odt) and Microsoft Word Documents (docx; starting with Word 2007) containing place holders and nested Tables.
 The data model is independent of the resulting document format.
 The library is not intended to create documents from scratch, instead to work with templates with placeholders.
