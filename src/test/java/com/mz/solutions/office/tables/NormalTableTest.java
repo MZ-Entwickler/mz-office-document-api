@@ -32,24 +32,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class NormalTableTest extends AbstractTableTest {
-
-    private static String randStr(int length) {
-        final char[] ALPHA = "abcdefghijklmnopqrstuvwxyzABDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -"
-                .toCharArray();
-
-        final StringBuilder buildResult = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            final int index = (int) (Math.random() * ALPHA.length);
-            buildResult.append(ALPHA[index]);
-        }
-
-        return buildResult.toString();
-    }
 
     @Test
     void testFile_NestedTables_docx() {
@@ -145,8 +131,7 @@ public class NormalTableTest extends AbstractTableTest {
     @Test
     public void testFile_MinorBugFix_EmptyTableZeroRows_docx() {
 
-        String input = NormalTableTest.class.getResource("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx");
         Path outputPath = outputPathOf(inputPath);
 
         processWordDocument(createDataPage(), inputPath, outputPath);
@@ -155,8 +140,7 @@ public class NormalTableTest extends AbstractTableTest {
     @Test
     public void testFile_MinorBugFix_EmptyTableZeroRows_odt() {
 
-        String documentPath = NormalTableTest.class.getResource("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt").getPath();
-        Path inputPath = Paths.get(documentPath);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt");
         Path outputPath = outputPathOf(inputPath);
 
         processOpenDocument(createDataPage(), inputPath, outputPath);

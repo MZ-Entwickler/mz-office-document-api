@@ -38,21 +38,19 @@ import com.mz.solutions.office.result.ResultFactory;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import static java.util.Arrays.asList;
 
 public class WordImages extends AbstractImageTest {
 
-    private static final Path INPUT_FILE_1 = Paths.get(WordImages.class.getResource("WordImagesInDocument.docx").getPath());
-    private static final Path INPUT_FILE_2 = Paths.get(WordImages.class.getResource("WordImagesInDocument_Tables.docx").getPath());
+    private static final Path INPUT_FILE_1 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordImagesInDocument.docx");
+    private static final Path INPUT_FILE_2 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordImagesInDocument_Tables.docx");
 
     @Test
     void testFile_WordDummyImages() {
 
-        String input = LibreOfficeImages.class.getResource("WordDummyImages.docx").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordDummyImages.docx");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newMicrosoftOfficeInstance()
@@ -63,8 +61,7 @@ public class WordImages extends AbstractImageTest {
     @Test
     void testFile_WordImageScaling_wDrawing() {
 
-        String input = LibreOfficeImages.class.getResource("WordImageScaling_wDrawing.docx").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordImageScaling_wDrawing.docx");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newMicrosoftOfficeInstance()
@@ -75,8 +72,7 @@ public class WordImages extends AbstractImageTest {
     @Test
     void testFile_WordImageScaling_wPict() {
 
-        String input = LibreOfficeImages.class.getResource("WordImageScaling_wPict.docx").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordImageScaling_wPict.docx");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newMicrosoftOfficeInstance()
@@ -87,8 +83,7 @@ public class WordImages extends AbstractImageTest {
     @Test
     void testFile_WordImageScaling_Mergefield() {
 
-        String input = LibreOfficeImages.class.getResource("WordImageScaling_Mergefield.docx").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("WordImageScaling_Mergefield.docx");
 
         final OfficeDocument document = OfficeDocumentFactory.newMicrosoftOfficeInstance()
                 .openDocument(inputPath);

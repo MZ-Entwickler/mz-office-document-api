@@ -24,15 +24,13 @@ package com.mz.solutions.office.placeholders;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public final class LibreOfficeClassicPlaceholderTest extends AbstractClassPlaceholderTest {
 
     @Test
     public void placeholdersAndUserDefinedFields() {
 
-        String documentPath = AbstractClassPlaceholderTest.class.getResource("LibreOffice_PlaceholdersAndUserDefiniedFields.odt").getPath();
-        Path inputPath = Paths.get(documentPath);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOffice_PlaceholdersAndUserDefiniedFields.odt");
         Path outputPath = outputPathOf(inputPath);
 
         processOpenDocument(createDataPage(), inputPath, outputPath);

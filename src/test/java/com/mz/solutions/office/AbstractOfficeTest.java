@@ -31,6 +31,7 @@ import java.nio.file.Paths;
 
 public abstract class AbstractOfficeTest {
 
+    protected static final Path TEST_SOURCE_DIRECTORY = Paths.get("src", "test", "resources", "com", "mz", "solutions", "office");
     protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-resources");
 
     protected Path outputPathOf(Path inputPath) {
@@ -79,6 +80,19 @@ public abstract class AbstractOfficeTest {
         final OfficeDocument document = docFactory.openDocument(docInput);
 
         document.generate(page, ResultFactory.toFile(docOutput));
+    }
+
+    protected static String randStr(int length) {
+        final char[] ALPHA = "abcdefghijklmnopqrstuvwxyzABDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -"
+                .toCharArray();
+
+        final StringBuilder buildResult = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            final int index = (int) (Math.random() * ALPHA.length);
+            buildResult.append(ALPHA[index]);
+        }
+
+        return buildResult.toString();
     }
 
 }

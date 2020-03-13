@@ -29,14 +29,16 @@ import com.mz.solutions.office.model.images.ImageValue;
 import com.mz.solutions.office.model.images.UnitOfLength;
 
 public abstract class AbstractClassPlaceholderTest extends AbstractOfficeTest {
-    
-    protected final DataPage createDataPage() {
+
+    protected static final String packageName = "placeholders";
+
+    protected DataPage createDataPage() {
         final DataPage page = new DataPage();
-        
+
         page.addValue(new DataValue("VALUE_1", "Value 1 Replaced"));
         page.addValue(new DataValue("VALUE_2", "Value 2 Replaced"));
         page.addValue(new DataValue("VALUE_3", "Value 3 Replaced"));
-        
+
         final ImageResource imageResourceRed = ImageResource.dummyColorImage(0xFF, 0x00, 0x00);
         final ImageResource imageResourceGreen = ImageResource.dummyColorImage(0x00, 0xFF, 0x00);
         final ImageResource imageResourceBlue = ImageResource.dummyColorImage(0x00, 0x00, 0xFF);

@@ -24,11 +24,11 @@ package com.mz.solutions.office.tables;
 import com.mz.solutions.office.AbstractOfficeTest;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 abstract class AbstractTableTest extends AbstractOfficeTest {
 
-    protected static final Path NESTED_TABLES = Paths.get(AbstractTableTest.class.getResource("NestedTables.docx").getPath());
-    protected static final Path NORMAL_TABLES_DOCX = Paths.get(AbstractTableTest.class.getResource("NormalTables.docx").getPath());
-    protected static final Path NORMAL_TABLES_ODT = Paths.get(AbstractTableTest.class.getResource("NormalTables.odt").getPath());
+    protected static final String packageName = "tables";
+    protected static final Path NESTED_TABLES = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("NestedTables.docx");
+    protected static final Path NORMAL_TABLES_DOCX = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("NormalTables.docx");
+    protected static final Path NORMAL_TABLES_ODT = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("NormalTables.odt");
 }

@@ -35,21 +35,19 @@ import com.mz.solutions.office.result.ResultFactory;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static java.util.Arrays.asList;
 
 public class LibreOfficeImages extends AbstractImageTest {
 
-    private static final Path INPUT_FILE_1 = Paths.get(LibreOfficeImages.class.getResource("LibreOfficeImagesInDocument.odt").getPath());
-    private static final Path INPUT_FILE_2 = Paths.get(LibreOfficeImages.class.getResource("OpenDocumentByWord.odt").getPath());
-    private static final Path INPUT_FILE_3 = Paths.get(LibreOfficeImages.class.getResource("LibreOfficeImagesInDocument_Tables.odt").getPath());
+    private static final Path INPUT_FILE_1 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOfficeImagesInDocument.odt");
+    private static final Path INPUT_FILE_2 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("OpenDocumentByWord.odt");
+    private static final Path INPUT_FILE_3 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOfficeImagesInDocument_Tables.odt");
 
     @Test
     public void testFile_LibreOfficeDummyImages() {
 
-        String input = LibreOfficeImages.class.getResource("LibreOfficeDummyImages.odt").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOfficeDummyImages.odt");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newOpenOfficeInstance()
@@ -60,8 +58,7 @@ public class LibreOfficeImages extends AbstractImageTest {
     @Test
     public void testFile_LibreOfficeImageScaling_Image() {
 
-        String input = LibreOfficeImages.class.getResource("LibreOfficeImageScaling_Image.odt").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOfficeImageScaling_Image.odt");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newOpenOfficeInstance()
@@ -72,8 +69,7 @@ public class LibreOfficeImages extends AbstractImageTest {
     @Test
     public void testFile_LibreOfficeImageScaling_UserDefinedField() {
 
-        String input = LibreOfficeImages.class.getResource("LibreOfficeImageScaling_UserDefinedField.odt").getPath();
-        Path inputPath = Paths.get(input);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("LibreOfficeImageScaling_UserDefinedField.odt");
         Path outputPath = outputPathOf(inputPath);
 
         OfficeDocumentFactory.newOpenOfficeInstance()

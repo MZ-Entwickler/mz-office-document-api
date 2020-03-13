@@ -21,22 +21,19 @@
  */
 package com.mz.solutions.office.placeholders;
 
-import com.mz.solutions.office.AbstractOfficeTest;
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.hints.StandardFormatHint;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
-public final class StandardFormatHintTest extends AbstractOfficeTest {
-    
+public final class StandardFormatHintTest extends AbstractClassPlaceholderTest {
+
     @Test
     public void testFile_StandardFormatHint_LibreOffice_odt() {
 
-        String input = AbstractClassPlaceholderTest.class.getResource("StandardFormatHint_LibreOffice.odt").getPath();
-        Path inputFile = Paths.get(input);
+        Path inputFile = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("StandardFormatHint_LibreOffice.odt");
         Path outputFile = TESTS_OUTPUT_PATH.resolve("StandardFormatHint_LibreOffice_Output.odt");
 
         processOpenDocument(createDataPage(), inputFile, outputFile);
@@ -45,21 +42,20 @@ public final class StandardFormatHintTest extends AbstractOfficeTest {
     @Test
     public void testFile_StandardFormatHint_MicrosoftOffice_docx() {
 
-        String input = AbstractClassPlaceholderTest.class.getResource("StandardFormatHint_MicrosoftWord.docx").getPath();
-        Path inputFile = Paths.get(input);
+        Path inputFile = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("StandardFormatHint_MicrosoftWord.docx");
         Path outputFile = TESTS_OUTPUT_PATH.resolve("StandardFormatHint_MicrosoftWord_Output.docx");
 
         processWordDocument(createDataPage(), inputFile, outputFile);
     }
-    
-    private DataPage createDataPage() {
+
+    public DataPage createDataPage() {
         final DataPage page = new DataPage();
-        
+
         page.addValue(new DataValue("ANY_VALUE", "Wert ersetzt!"));
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_1", StandardFormatHint.PARAGRAPH_KEEP));
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_2", StandardFormatHint.PARAGRAPH_HIDDEN));
         page.addValue(new DataValue("STANDARD_FORMAT_HINT_3", StandardFormatHint.PARAGRAPH_REMOVE));
-        
+
         page.addValue(new DataValue("FORMAT_HINT_TABLE_KEEP", StandardFormatHint.TABLE_KEEP));
         page.addValue(new DataValue("FORMAT_HINT_TABLE_REMOVE", StandardFormatHint.TABLE_REMOVE));
         

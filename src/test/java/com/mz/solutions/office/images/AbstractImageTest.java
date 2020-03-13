@@ -28,19 +28,20 @@ import com.mz.solutions.office.model.DataTableRow;
 import com.mz.solutions.office.model.DataValue;
 import com.mz.solutions.office.model.images.ImageResource;
 import com.mz.solutions.office.model.images.ImageValue;
-import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
 import com.mz.solutions.office.model.images.UnitOfLength;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.mz.solutions.office.model.images.StandardImageResourceType.PNG;
+
 abstract class AbstractImageTest extends AbstractOfficeTest {
 
-    protected static final Path IMG_1 = Paths.get(AbstractOfficeTest.class.getResource("img_result_1.png").getPath());
-    protected static final Path IMG_2 = Paths.get(AbstractOfficeTest.class.getResource("img_result_2.png").getPath());
-    protected static final Path IMG_3 = Paths.get(AbstractOfficeTest.class.getResource("img_result_3.png").getPath());
+    protected static final String packageName = "images";
+    protected static final Path IMG_1 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("img_result_1.png");
+    protected static final Path IMG_2 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("img_result_2.png");
+    protected static final Path IMG_3 = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("img_result_3.png");
 
     protected final List<DataPage> createImageScalingPage() {
         final ImageResource image1 = ImageResource.loadImage(IMG_1, PNG);

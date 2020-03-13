@@ -24,15 +24,12 @@ package com.mz.solutions.office.placeholders;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public final class MicrosoftWordClassicPlaceholderTest extends AbstractClassPlaceholderTest {
 
-    protected final String documentPath = AbstractClassPlaceholderTest.class.getResource("Word_Placeholders.docx").getPath();
-
     @Test
     public void testFile_Word_Placeholders_docx() {
-        Path inputPath = Paths.get(documentPath);
+        Path inputPath = TEST_SOURCE_DIRECTORY.resolve(packageName).resolve("Word_Placeholders.docx");
         Path outputPath = outputPathOf(TESTS_OUTPUT_PATH.resolve("Word_Placeholders_Output.docx"));
 
         processWordDocument(createDataPage(), inputPath, outputPath);
