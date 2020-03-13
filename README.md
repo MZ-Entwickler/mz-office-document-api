@@ -1,5 +1,5 @@
 # MZ Office Document API
-![](https://img.shields.io/badge/maven-0.8.0-green)  
+![](https://img.shields.io/badge/maven-0.8.0-green)  ![Java CI with Maven](https://github.com/MZ-Entwickler/mz-office-document-api/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)  
 Library to fill out Libre-/OpenOffice (odt) and Microsoft Word Documents (docx; starting with Word 2007) containing place holders and nested Tables.
 The data model is independent of the resulting document format.
 The library is not intended to create documents from scratch, instead to work with templates with placeholders.
@@ -17,7 +17,7 @@ Affero General Public License Version 3 (AGPL v3)
 - _Compile_: JSR 305 (Annotations for Software Defect Detection)
 - _Test_: JUnit 5
 
-The project needs Java 1.8
+The project needs Java 13
 
 # Examples
 In the directory `examples` there are some example projects. Further information can be found in the java doc.
