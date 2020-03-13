@@ -23,16 +23,32 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.result.ResultFactory;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.junit.jupiter.api.BeforeAll;
 
 public abstract class AbstractOfficeTest {
 
     protected static final Path TEST_SOURCE_DIRECTORY = Paths.get("src", "test", "resources", "com", "mz", "solutions", "office");
     protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-resources");
+    
+    @BeforeAll
+    public static void beforeTestRun() {
+        try {
+            Files.createDirectories(TESTS_OUTPUT_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+                try {
+            Files.createDirectories(TESTS_OUTPUT_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
     protected Path outputPathOf(Path inputPath) {
 
@@ -56,11 +72,6 @@ public abstract class AbstractOfficeTest {
 
     protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
 
-        try {
-            Files.createDirectories(TESTS_OUTPUT_PATH);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);
@@ -70,11 +81,6 @@ public abstract class AbstractOfficeTest {
 
     protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
 
-        try {
-            Files.createDirectories(TESTS_OUTPUT_PATH);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);

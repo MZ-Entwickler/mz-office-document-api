@@ -643,6 +643,10 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         }
 
         private void walkNode(Node node, String elementName, int deep) {
+            if (null == node) {
+                return;
+            }
+            
             if (node.getNodeType() == Node.ELEMENT_NODE) {
                 if (node.getNodeName().equals(elementName)) {
                     fieldNodes.add(node);

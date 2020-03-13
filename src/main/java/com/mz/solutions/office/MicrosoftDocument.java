@@ -298,7 +298,7 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
         final Document docHeaderFooter = getDocumentPart(headerFooterPartName);
         
         final int wHdrElementCount = docHeaderFooter.getElementsByTagName("w:hdr").getLength();
-        final boolean isHeader = wHdrElementCount > 1;
+        final boolean isHeader = wHdrElementCount > 0;
         
         // headerFooterPartName kann z.B. bei Kopzeile sein: 'word/header1.xml'
         // headerFooterPartName kann z.B. bei Fußzeile sein: 'word/footer1.xml'
