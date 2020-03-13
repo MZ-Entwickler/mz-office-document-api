@@ -31,6 +31,8 @@ import com.mz.solutions.office.result.ResultFactory;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
@@ -79,10 +81,7 @@ public class NormalTableTest extends AbstractTableTest {
 
         tableDocument.addTableRow(documentRow);
 
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(NESTED_TABLES);
-
-        document.generate(page, ResultFactory.toFile(outputPathOf(NESTED_TABLES)));
+        processWordDocument(page, NESTED_TABLES, outputPathOf(NESTED_TABLES));
 
     }
 
@@ -134,41 +133,33 @@ public class NormalTableTest extends AbstractTableTest {
 
     @Test
     void testFile_NormalTables_docx() {
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(NORMAL_TABLES_DOCX);
-
-        document.generate(createDataPage(),
-                ResultFactory.toFile(outputPathOf(NORMAL_TABLES_DOCX)));
+        processWordDocument(createDataPage(), NORMAL_TABLES_DOCX, outputPathOf(NORMAL_TABLES_DOCX));
     }
 
     @Test
     void testFile_NormalTables_odt() {
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(NORMAL_TABLES_ODT);
-
-        document.generate(createDataPage(),
-                ResultFactory.toFile(outputPathOf(NORMAL_TABLES_ODT)));
+        processOpenDocument(createDataPage(), NORMAL_TABLES_ODT, outputPathOf(NORMAL_TABLES_ODT));
     }
 
 
     @Test
     public void testFile_MinorBugFix_EmptyTableZeroRows_docx() {
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(
-                ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx"));
 
-        document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.docx")));
+        String input = NormalTableTest.class.getResource("MinorBugFix_EmptyTableZeroRows_MicrosoftOffice.docx").getPath();
+        Path inputPath = Paths.get(input);
+        Path outputPath = outputPathOf(inputPath);
+
+        processWordDocument(createDataPage(), inputPath, outputPath);
     }
 
     @Test
     public void testFile_MinorBugFix_EmptyTableZeroRows_odt() {
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(
-                ROOT_IN.resolve("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt"));
 
-        document.generate(createDataPage(), ResultFactory.toFile(
-                ROOT_OUT.resolve("MinorBugFix_EmptyTableZeroRows_Output.odt")));
+        String documentPath = NormalTableTest.class.getResource("MinorBugFix_EmptyTableZeroRows_LibreOffice.odt").getPath();
+        Path inputPath = Paths.get(documentPath);
+        Path outputPath = outputPathOf(inputPath);
+
+        processOpenDocument(createDataPage(), inputPath, outputPath);
     }
 
     private DataPage createDataPage() {
