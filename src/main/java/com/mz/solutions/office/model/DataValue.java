@@ -22,13 +22,11 @@
 package com.mz.solutions.office.model;
 
 import com.mz.solutions.office.extension.ExtendedValue;
-
-import javax.annotation.Nullable;
+import static com.mz.solutions.office.resources.DataValueKeys.*;
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
 import java.io.Serializable;
 import java.util.*;
-
-import static com.mz.solutions.office.resources.MessageResources.formatMessage;
-import static mz.solutions.office.resources.DataValueKeys.*;
+import javax.annotation.Nullable;
 
 /**
  * Einzelner Eintrag für einen Ersetzungsvorgang aus Bezeichner

@@ -29,15 +29,13 @@ import com.mz.solutions.office.model.*;
 import com.mz.solutions.office.model.hints.StandardFormatHint;
 import com.mz.solutions.office.model.images.*;
 import com.mz.solutions.office.model.interceptor.InterceptionContext;
-import org.w3c.dom.*;
-
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
+import static com.mz.solutions.office.resources.OpenDocumentKeys.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.util.*;
-
-import static com.mz.solutions.office.resources.MessageResources.formatMessage;
-import static mz.solutions.office.resources.OpenDocumentKeys.*;
+import org.w3c.dom.*;
 
 final class OpenDocument extends AbstractOfficeXmlDocument {
     

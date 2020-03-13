@@ -21,11 +21,11 @@
  */
 package com.mz.solutions.office;
 
+import static com.mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
+import static com.mz.solutions.office.resources.MessageResources.formatMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import static mz.solutions.office.resources.AbstractOfficeXmlDocumentKeys.INVALID_DOC_FORMAT;
-import static mz.solutions.office.resources.MessageResources.formatMessage;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;

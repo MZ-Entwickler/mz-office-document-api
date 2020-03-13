@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package mz.solutions.office.resources;
+package com.mz.solutions.office.resources;
 
 /**
  * Intern - Schlüssel für die lokalisierten Texte für {@code MicrosoftDocument}.
