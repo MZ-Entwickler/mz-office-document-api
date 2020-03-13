@@ -23,7 +23,6 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.result.ResultFactory;
-import org.junit.jupiter.api.AfterAll;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,15 +33,6 @@ public abstract class AbstractOfficeTest {
 
     protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-resources");
 
-    @AfterAll
-    public static void setup() {
-        try {
-            Files.createDirectories(TESTS_OUTPUT_PATH);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     protected Path outputPathOf(Path inputPath) {
 
         return outputPathOf(inputPath, null);
@@ -50,21 +40,11 @@ public abstract class AbstractOfficeTest {
 
     protected Path outputPathOf(Path inputPath, String suffix) {
 
-        Path name = inputPath.getFileName();
+        String fileName = inputPath.toFile().getName();
 
-        // null for empty paths and root-only paths
-        if (name == null) {
-            return inputPath;
-        }
-
-        String fileName = name.toString();
         int dotIndex = fileName.lastIndexOf('.');
         String extension = fileName.substring(dotIndex);
         String nameWithoutExtension = fileName.substring(0, dotIndex);
-
-        if (dotIndex == -1) {
-            return name;
-        }
 
         if (suffix == null) {
             return TESTS_OUTPUT_PATH.resolve(nameWithoutExtension + "_Output" + extension);
@@ -74,6 +54,13 @@ public abstract class AbstractOfficeTest {
     }
 
     protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
+
+        try {
+            Files.createDirectories(TESTS_OUTPUT_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);
 
@@ -81,6 +68,13 @@ public abstract class AbstractOfficeTest {
     }
 
     protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
+
+        try {
+            Files.createDirectories(TESTS_OUTPUT_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);
 
