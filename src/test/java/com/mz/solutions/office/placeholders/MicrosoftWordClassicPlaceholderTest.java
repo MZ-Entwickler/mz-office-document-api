@@ -26,18 +26,16 @@ import com.mz.solutions.office.OfficeDocumentFactory;
 import com.mz.solutions.office.result.ResultFactory;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public final class MicrosoftWordClassicPlaceholderTest extends AbstractClassPlaceholderTest {
 
-    protected final Path docFile = Paths.get(
-            AbstractClassPlaceholderTest.class.getResource("Word_Placeholders.docx").getPath());
+    protected final String documentPath = AbstractClassPlaceholderTest.class.getResource("Word_Placeholders.docx").getPath();
 
     @Test
     public void testFile_Word_Placeholders_docx() {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(docFile);
+        final OfficeDocument document = docFactory.openDocument(Paths.get(documentPath));
 
         document.generate(createDataPage(), ResultFactory.toFile(
                 TESTS_OUTPUT_PATH.resolve("Word_Placeholders_Output.docx")));

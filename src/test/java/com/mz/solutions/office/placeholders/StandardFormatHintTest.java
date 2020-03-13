@@ -35,21 +35,21 @@ public final class StandardFormatHintTest extends AbstractOfficeTest {
     @Test
     public void testFile_StandardFormatHint_LibreOffice_odt() {
 
-        Path docFile = Paths.get(
-                AbstractClassPlaceholderTest.class.getResource(
-                        "StandardFormatHint_LibreOffice.odt").getPath());
+        String input = AbstractClassPlaceholderTest.class.getResource("StandardFormatHint_LibreOffice.odt").getPath();
+        Path inputFile = Paths.get(input);
+        Path outputFile = TESTS_OUTPUT_PATH.resolve("StandardFormatHint_LibreOffice_Output.odt");
 
-        processOpenDocument(createDataPage(), docFile, "StandardFormatHint_LibreOffice_Output.odt");
+        processOpenDocument(createDataPage(), inputFile, outputFile);
     }
     
     @Test
     public void testFile_StandardFormatHint_MicrosoftOffice_docx() {
 
-        Path docFile = Paths.get(
-                AbstractClassPlaceholderTest.class.getResource(
-                        "StandardFormatHint_MicrosoftWord.docx").getPath());
+        String input = AbstractClassPlaceholderTest.class.getResource("StandardFormatHint_MicrosoftWord.docx").getPath();
+        Path inputFile = Paths.get(input);
+        Path outputFile = TESTS_OUTPUT_PATH.resolve("StandardFormatHint_MicrosoftWord_Output.docx");
 
-        processWordDocument(createDataPage(), docFile, "StandardFormatHint_MicrosoftWord_Output.docx");
+        processWordDocument(createDataPage(), inputFile, outputFile);
     }
     
     private DataPage createDataPage() {

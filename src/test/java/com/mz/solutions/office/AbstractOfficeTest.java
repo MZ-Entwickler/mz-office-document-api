@@ -32,7 +32,7 @@ import java.nio.file.Paths;
 
 public abstract class AbstractOfficeTest {
 
-    protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-templates");
+    protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-resources");
 
     @AfterAll
     public static void setup() {
@@ -67,24 +67,24 @@ public abstract class AbstractOfficeTest {
         }
 
         if (suffix == null) {
-            return inputPath.resolveSibling(nameWithoutExtension + "_Output" + extension);
+            return TESTS_OUTPUT_PATH.resolve(nameWithoutExtension + "_Output" + extension);
         } else {
-            return inputPath.resolveSibling(nameWithoutExtension + "_Output" + "_" + suffix + extension);
+            return TESTS_OUTPUT_PATH.resolve(nameWithoutExtension + "_" + suffix + "_Output" + extension);
         }
     }
 
-    protected final void processOpenDocument(DataPage page, Path docInput, String docOutput) {
+    protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);
 
-        document.generate(page, ResultFactory.toFile(TESTS_OUTPUT_PATH.resolve(docOutput)));
+        document.generate(page, ResultFactory.toFile(docOutput));
     }
 
-    protected final void processWordDocument(DataPage page, Path docInput, String docOutput) {
+    protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
         final OfficeDocument document = docFactory.openDocument(docInput);
 
-        document.generate(page, ResultFactory.toFile(TESTS_OUTPUT_PATH.resolve(docOutput)));
+        document.generate(page, ResultFactory.toFile(docOutput));
     }
 
 }
