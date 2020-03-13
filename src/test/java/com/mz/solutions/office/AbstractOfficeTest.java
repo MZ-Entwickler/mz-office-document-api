@@ -23,14 +23,25 @@ package com.mz.solutions.office;
 
 import com.mz.solutions.office.model.DataPage;
 import com.mz.solutions.office.result.ResultFactory;
+import org.junit.jupiter.api.AfterAll;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public abstract class AbstractOfficeTest {
 
-    protected static final Path ROOT_IN = Paths.get("test-templates");
-    protected static final Path ROOT_OUT = ROOT_IN.resolve("output");
+    protected static final Path TESTS_OUTPUT_PATH = Paths.get("target").resolve("test-resources");
+
+    @AfterAll
+    public static void setup() {
+        try {
+            Files.createDirectories(TESTS_OUTPUT_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     protected Path outputPathOf(Path inputPath) {
 
@@ -56,36 +67,24 @@ public abstract class AbstractOfficeTest {
         }
 
         if (suffix == null) {
-            return inputPath.resolveSibling(nameWithoutExtension + "_Output" + extension);
+            return TESTS_OUTPUT_PATH.resolve(nameWithoutExtension + "_Output" + extension);
         } else {
-            return inputPath.resolveSibling(nameWithoutExtension + "_Output" + "_" + suffix + extension);
+            return TESTS_OUTPUT_PATH.resolve(nameWithoutExtension + "_" + suffix + "_Output" + extension);
         }
     }
 
     protected final void processOpenDocument(DataPage page, Path docInput, Path docOutput) {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newOpenOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(
-                ROOT_IN.resolve(docInput));
+        final OfficeDocument document = docFactory.openDocument(docInput);
 
-        document.generate(page, ResultFactory.toFile(
-                ROOT_OUT.resolve(docOutput)));
-    }
-
-    protected final void processOpenDocument(DataPage page, String inFileName, String outFileName) {
-        processOpenDocument(page, Paths.get(inFileName), Paths.get(outFileName));
+        document.generate(page, ResultFactory.toFile(docOutput));
     }
 
     protected final void processWordDocument(DataPage page, Path docInput, Path docOutput) {
         final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(
-                ROOT_IN.resolve(docInput));
+        final OfficeDocument document = docFactory.openDocument(docInput);
 
-        document.generate(page, ResultFactory.toFile(
-                ROOT_OUT.resolve(docOutput)));
-    }
-
-    protected final void processWordDocument(DataPage page, String inFileName, String outFileName) {
-        processWordDocument(page, Paths.get(inFileName), Paths.get(outFileName));
+        document.generate(page, ResultFactory.toFile(docOutput));
     }
 
 }
