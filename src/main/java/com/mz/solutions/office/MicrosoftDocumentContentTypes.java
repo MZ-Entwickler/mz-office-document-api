@@ -141,7 +141,7 @@ final class MicrosoftDocumentContentTypes {
             }
         }
         
-        return resultList.isEmpty() ? EMPTY_STRING_ARRAY : resultList.toArray(String[]::new);
+        return resultList.isEmpty() ? EMPTY_STRING_ARRAY : resultList.toArray(new String[resultList.size()]);
     }
     
     private String[] assertNonEmptyPartArray(String[] anyStringArray) {
