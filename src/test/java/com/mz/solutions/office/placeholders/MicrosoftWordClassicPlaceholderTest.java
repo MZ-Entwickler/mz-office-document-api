@@ -21,11 +21,9 @@
  */
 package com.mz.solutions.office.placeholders;
 
-import com.mz.solutions.office.OfficeDocument;
-import com.mz.solutions.office.OfficeDocumentFactory;
-import com.mz.solutions.office.result.ResultFactory;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public final class MicrosoftWordClassicPlaceholderTest extends AbstractClassPlaceholderTest {
@@ -34,11 +32,10 @@ public final class MicrosoftWordClassicPlaceholderTest extends AbstractClassPlac
 
     @Test
     public void testFile_Word_Placeholders_docx() {
-        final OfficeDocumentFactory docFactory = OfficeDocumentFactory.newMicrosoftOfficeInstance();
-        final OfficeDocument document = docFactory.openDocument(Paths.get(documentPath));
+        Path inputPath = Paths.get(documentPath);
+        Path outputPath = outputPathOf(TESTS_OUTPUT_PATH.resolve("Word_Placeholders_Output.docx"));
 
-        document.generate(createDataPage(), ResultFactory.toFile(
-                TESTS_OUTPUT_PATH.resolve("Word_Placeholders_Output.docx")));
+        processWordDocument(createDataPage(), inputPath, outputPath);
     }
     
 }

@@ -17,7 +17,7 @@ Affero General Public License Version 3 (AGPL v3)
 - _Compile_: JSR 305 (Annotations for Software Defect Detection)
 - _Test_: JUnit 5
 
-The project needs Java 13
+The project needs Java 1.8
 
 # Examples
 In the directory `examples` there are some example projects. Further information can be found in the java doc.
