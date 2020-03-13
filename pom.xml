@@ -15,7 +15,7 @@
         The data model is independent of the resulting document format.
         The library is not intended to create documents from scratch, instead to work with templates with placeholders.
     </description>
-    <url>https://github.com/mriebe/mz-office-document-api</url>
+    <url>https://github.com/MZ-Entwickler/mz-office-document-api</url>
 
     <licenses>
         <license>
@@ -25,8 +25,17 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/mriebe/mz-office-document-api</url>
+        <url>https://github.com/MZ-Entwickler/mz-office-document-api</url>
     </scm>
+
+    <profiles>
+        <profile>
+            <id>github</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+    </profiles>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -68,5 +77,13 @@
 
         </plugins>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>MZ-Entwickler</name>
+            <url>https://maven.pkg.github.com/MZ-Entwickler/mz-office-document-api</url>
+        </repository>
+    </distributionManagement>
 
 </project>
