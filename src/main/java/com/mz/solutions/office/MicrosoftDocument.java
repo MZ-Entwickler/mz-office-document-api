@@ -558,12 +558,39 @@ final class MicrosoftDocument extends AbstractOfficeXmlDocument {
             final boolean isUnkownTable = tableName.isPresent() == false;
             
             if (isUnkownTable) {
+                // Eltern-Knoten der Tabelle. Ist später die ganze Tabelle nicht mal mehr in der
+                // Liste der Kind-Knoten, dann wurde durch einen anderen Vorgang die gesamte Tabelle
+                // entfernt, womit wir im Ersetzungsprozess dann keine weitere Ersetzung mehr
+                // vornehmen müssen.
+                final Node wTblParent = tableNode.getParentNode();
+                
                 // Unbekannte Tabellen werden mit selben Daten befüllt, dabei müssen wir das erste
                 // w:tbl Element überspringen.
                 final List<Node> wTblNodeList = toFlatNodeList(tableNode.getChildNodes());
                 
                 for (Node childNode : wTblNodeList) {
                     replaceAllFields(childNode, values);
+                    
+                    // Gibt es die ganze Tabelle nicht mehr im Eltern-Knoten, dann können wir die
+                    // Ersetzung der Tabelle ab dem Punkt auch beenden.
+                    {
+                        boolean stillContainsTheTable = false;
+                        final List<Node> parentNodes = toFlatNodeList(wTblParent.getChildNodes());
+                        for (Node anyNode : parentNodes) {
+                            // Ist im Eltern-Knoten von w:tbl noch unser Tabellen-Element enthalten?
+                            if (anyNode.isSameNode(tableNode)) {
+                                stillContainsTheTable = true; // ja!
+                                break;
+                            }
+                        }
+                        
+                        if (stillContainsTheTable == false) {
+                            // w:tbl Element ist anscheinend im Eltern-Knoten entfernt worden.
+                            // Dann schließen wir hier den Ersetzungsprozess für die Tabelle ab, da
+                            // diese ja eh nicht mehr im Dokument enthalten sein wird.
+                            break;
+                        }
+                    }
                 }
             } else {
                 // Bekannte Tabellen werden korrekt mit den Datenzeilen befüllt

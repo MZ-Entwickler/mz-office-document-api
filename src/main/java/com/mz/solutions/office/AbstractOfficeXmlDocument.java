@@ -555,7 +555,11 @@ abstract class AbstractOfficeXmlDocument extends OfficeDocument {
         final List<Node> result = new ArrayList<>(nodeList.getLength());
         
         for (int i = 0; i < nodeList.getLength(); i++) {
-            result.add(nodeList.item(i));
+            final Node node = nodeList.item(i);
+            
+            if (null != node) {
+                result.add(nodeList.item(i));
+            }
         }
         
         return result;
