@@ -37,7 +37,7 @@
  * externen Datenmodellen. Die Serialisierung (und damit auch das Laden und
  * Speichern) können alternativ ebenfalls verwendet werden.<br><br>
  * 
- * <b>Wurzelelement {@link DataPage} des Dokumenten-Objekt-Modells:</b><br>
+ * <b>Wurzelelement {@link com.mz.solutions.office.model.DataPage} des Dokumenten-Objekt-Modells:</b><br>
  * Jedes Dokument (oder jede Serie von Dokumenten/Seiten) beginnen immer mit
  * einer Instanz von {@link DataPage}. Eine Instanz von {@link DataPage}
  * entspricht immer einem einzelnen Dokumentes oder einer Seite oder mehrerer
@@ -107,6 +107,24 @@
  * 
  *  // Tabelle dem Dokument/ der Seite hinzufügen
  *  invoiceDocument.addTable(invoiceItems);
+ * 
+ *  // Steuerung des Zahlungstextes
+ *  if (invoice.isDueIn14Days()) {
+ *      // less than 14 days to pay
+ *      invoiceDocument.addValues(
+ *              new DataValue("INV_PAYMENT_TEXT_0", StandardFormatHint.PARAGRAPH_REMOVE),
+ *              new DataValue("INV_PAYMENT_TEXT_1", StandardFormatHint.PARAGRAPH_KEEP));
+ *  } else {
+ *      // more than 14 days to pay
+ *      invoiceDocument.addValues(
+ *              new DataValue("INV_PAYMENT_TEXT_0", StandardFormatHint.PARAGRAPH_KEEP),
+ *              new DataValue("INV_PAYMENT_TEXT_1", StandardFormatHint.PARAGRAPH_REMOVE));
+ *  }
+ * 
+ *  // Tabelle Skonto ausblenden bei Privatkunden
+ *  invoiceDocument.addValue(new DataValue("INV_TBL_SKONTO",
+ *          invoice.isCompanyInvoice() ? StandardFormatHint.TABLE_KEEP
+ *                                     : StandardFormatHint.TABLE_REMOVE));
  * 
  *  // ...
  * </pre>

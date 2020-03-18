@@ -99,8 +99,11 @@
  * <p><b>[Spezifisch] Apache OpenOffice und LibreOffice:</b><br>
  * <i>Platzhalter</i> sind in OpenOffice "Varibalen" vom Typ "Benutzerdefinierte
  * Felder"  (Variables "User Fields") und findet sich im Dialog "Felder", unter
- * dem Tab "Variablen". Die einfachen (unbenannten!) Platzhalter von OpenOffice
- * werden nicht unterstützt. Jeder Platzhalter (Benutzerdefiniertes Feld) muss
+ * dem Tab "Variablen". Es werden neben "Benutzerdefinierte Felder", auch die normalen Platzhalter
+ * und Datenbank-Felder im Dokument als Platzhalter erkannt und unterstützt. Wird ein ODT Dokument
+ * von MS Word mit MergeFields gespeichert, oder ein bestehendes ODT mit benutzerdefinierten Feldern
+ * als ODT exportiert, werden diese in (unterstützte) Datenbank-Felder umgewandelt.
+ * Jeder Platzhalter (Benutzerdefiniertes Feld) muss
  * in Grußbuchstaben geschrieben sein und kann (optional) einen vordefinierten
  * Wert enthalten. Der Typ wird beim Ersetzungsvorgang ignoriert und zu Text
  * umgewandelt, ebenso wie die daraus resultierenden Formatierungsangaben -
@@ -109,7 +112,7 @@
  * Wert belassen sondern aus dem Dokument entfernt. Die <u>umgebende</u>
  * Schriftformatierung von Platzhaltern wird im Ausgabedokument beibehalten.
  * <br><br>
-<i>Seitenumbrüche</i> sind in OpenOffice nie hart-kodiert (im Gegensatz zu
+ * <i>Seitenumbrüche</i> sind in OpenOffice nie hart-kodiert (im Gegensatz zu
  * Microsoft Office) und ergeben sich lediglich aus den Formatierungsangaben
  * von Absätzen. Soll nach jeder {@link com.mz.solutions.office.model.DataPage}
  * ein Seitenumbruch erfolgen, muss im aller ersten Absatz des Dokumentes 
@@ -155,8 +158,9 @@
  * einer Tabelle eine Bezeichnung/ Name zu vergeben, muss in der ersten Zelle
  * ein unsichtbarer Textmarker hinterlegt werden, dessen Name in Großbuchstaben
  * den Namen der Tabelle markiert.<br><br>
- * <i>Kopf- und Fußzeilen</i> werden in Word nicht ersetzt und sollten maximal
- * Word-bekannte Feldbefehle enthalten.<br><br>
+ * <i>Kopf- und Fußzeilen</i> werden beim normalen Ersetzungsvorgang nicht berücksichtigt.
+ * Siehe dazu Abschnitt Dokumenten-Anweisungen. Mit Dokumenten-Anweisungen können Kopf- und 
+ * Fußzeilen bei DOCX Dokumenten ersetzt werden. 
  * Word-Dokumente ab Version 2007 im Open XML Document Format ({@code DOCX})
  * werden unterstützt.</p>
  * 
@@ -229,14 +233,15 @@
  * {@link com.mz.solutions.office.instruction.DocumentProcessingInstruction} oder händisch durch
  * Implementieren der jeweiligen Klassen.</p>
  * 
- * <p>Kopf- und Fußzeilen werden (derzeit) nur bei {@code ODT} Dokumente unterstützt.</p>
+ * <p>Kopf- und Fußzeilen werden mit eigenem {@link com.mz.solutions.office.model.DataPage} bei
+ * {@code ODT} und {@code DOCX} Dokumente unterstützt.</p>
  * <pre>
- *  // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
+ *  // Header and Footer in the document (ODT or DOCX)
  *  final OfficeDocument anyDocument = ...
  * 
  *  final DataPage documentData = ...
- *  final DataPage headerData = ...     // Header und Footer replacement only for ODT-Files
- *  final DataPage footerData = ...
+ *  final DataPage headerData = ...     // Header-Values
+ *  final DataPage footerData = ...     // Footer-Values
  * 
  *  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
  *          DocumentProcessingInstruction.replaceHeaderWith(headerData),
