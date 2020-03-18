@@ -1,23 +1,22 @@
 # MZ Office Document API
 ![](https://img.shields.io/badge/maven-0.8.0-green)  ![Java CI with Maven](https://github.com/MZ-Entwickler/mz-office-document-api/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)  
-Library to fill out Libre-/OpenOffice (odt) and Microsoft Word Documents (docx; starting with Word 2007) containing place holders and nested Tables.
-The data model is independent of the resulting document format.
-The library is not intended to create documents from scratch, instead to work with templates with placeholders.
+Library to fill out Libre-/OpenOffice (`ODT`) and Microsoft Word Documents (`DOCX`; starting with Word 2007) containing place holders and nested Tables. The data model is independent of the resulting document format.
 
-By using an abstract model layer (`com.mz.solutions.office.model`),
-both formats (docx/odt) can be used by the same code base.
+The library is not intended to create documents from scratch, instead to work with templates containing placeholders, tables with placeholders and nested sub tables (tables containing tables).
 
-For Microsoft Word there are some extensions to use Custom XML Parts.
+By using an abstract model layer (`com.mz.solutions.office.model`), both formats (`DOCX`/`ODT`) can be used by the same code base.
 
-## Lizenz
+For Microsoft Word there are some extensions to use Custom XML Parts and using the functionality of `w:altChunk` to insert foreign documents inside the main document.
+
+## License
 Affero General Public License Version 3 (AGPL v3)
 
-## Abhängigkeiten
-- _Runtime_: No dependencies at runtime needed
+## Dependencies
+- _Runtime_: No dependencies at runtime needed. (cool, right?)
 - _Compile_: JSR 305 (Annotations for Software Defect Detection)
 - _Test_: JUnit 5
 
-The project needs Java 1.8
+The project needs Java 1.8. It is usable up to Java 13. (tested)
 
 # Examples
 In the directory `examples` there are some example projects. Further information can be found in the java doc.
@@ -132,7 +131,7 @@ _Seitenumbrüche_ können weich (per Absatzformatierung) oder hart (per Einstell
 
 _Tabellenbezeichner_ können in Word nicht direkt vergeben werden. Um einer Tabelle eine Bezeichnung/ Name zu vergeben, muss in der ersten Zelle ein unsichtbarer Textmarker hinterlegt werden, dessen Name in Großbuchstaben den Namen der Tabelle markiert.
 
-_Kopf- und Fußzeilen_ werden in Word nicht ersetzt und sollten maximal Word-bekannte Feldbefehle enthalten.
+_Kopf- und Fußzeilen_ werden beim normalen Ersetzungsvorgang nicht berücksichtigt. Mit Dokumenten-Anweisungen können Kopf- und Fußzeilen bei DOCX Dokumenten ersetzt werden.
 
 Word-Dokumente ab Version 2007 im Open XML Document Format (DOCX) werden unterstützt.
 
@@ -193,8 +192,24 @@ __Beispiel:__
   // Tabelle dem Dokument/ der Seite hinzufügen
   invoiceDocument.addTable(invoiceItems);
  
-  // ...
+  // Steuerung des Zahlungstextes
+  if (invoice.isDueIn14Days()) {
+      // less than 14 days to pay
+      invoiceDocument.addValues(
+              new DataValue("INV_PAYMENT_TEXT_0", StandardFormatHint.PARAGRAPH_REMOVE),
+              new DataValue("INV_PAYMENT_TEXT_1", StandardFormatHint.PARAGRAPH_KEEP));
+  } else {
+      // more than 14 days to pay
+      invoiceDocument.addValues(
+              new DataValue("INV_PAYMENT_TEXT_0", StandardFormatHint.PARAGRAPH_KEEP),
+              new DataValue("INV_PAYMENT_TEXT_1", StandardFormatHint.PARAGRAPH_REMOVE));
+  }
  
+  // Tabelle Skonto ausblenden bei Privatkunden
+  invoiceDocument.addValue(new DataValue("INV_TBL_SKONTO",
+          invoice.isCompanyInvoice() ? StandardFormatHint.TABLE_KEEP
+                                     : StandardFormatHint.TABLE_REMOVE));
+  // ...
 ```
 
 # Schreiben der Ausgabe-Dokumente - com.mz.solutions.office.result
@@ -281,25 +296,32 @@ mögliche Anweisungen ist das Abfangen (oder gezielte Laden) von Dokumenten-Teil
 Dateien im ZIP Container) und der Bearbeitung des XML-Baumes vor und/oder nach Ausführung des
 Ersetzungs-Vorganges.
 
-Bei LibreOffice/Apache-OpenOffice können dazu bei ODT Dateien die Kopf- und Fußzeilen im
-Ersetzungs-Prozess mit einbezogen werden.
+Bei LibreOffice/Apache-OpenOffice sowie Microsoft Office können dazu bei ODT und DOCX
+Dateien die Kopf- und Fußzeilen im Ersetzungs-Prozess mit einbezogen werden.
 
 Alle Anweisungen können erstellt werden über die vereinfachten Factory-Methoden in
 `com.mz.solutions.office.instruction.DocumentProcessingInstruction` oder händisch durch
 Implementieren der jeweiligen Klassen.
 
-__Kopf- und Fußzeilen werden (derzeit) nur bei `ODT` Dokumente unterstützt.__
+__Kopf- und Fußzeilen werden `ODT` und `DOCX` Dokumente unterstützt.__
 ```java
- // Header and Footer in ODT Documents (Header and Footer in MS Word Documents are not supported)
+ // A document containing (maybe) a header and a footer
  final OfficeDocument anyDocument = ...
 
  final DataPage documentData = ...
- final DataPage headerData = ...     // Header und Footer replacement only for ODT-Files
- final DataPage footerData = ...
+ final DataPage headerData = ...     // Values for header placeholders
+ final DataPage footerData = ...     // Values for footer placeholders
 
  anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
          DocumentProcessingInstruction.replaceHeaderWith(headerData),
          DocumentProcessingInstruction.replaceFooterWith(footerData));
+         
+ // a shorter way to replace header and footer if the same model is used:
+ final DataPage headerFooterSameData = ...    // (same) values for header AND footer
+ 
+ anyDocument.generate(documentData, ResultFactory.toFile(invoiceOutput),
+         DocumentProcessingInstruction.replaceHeaderFooterWith(headerFooterSameData));
+         
 ```
 
 ___Document-Interceptors werden bei beiden Office-Implementierungen unterstützt.___
@@ -330,8 +352,47 @@ ___Document-Interceptors werden bei beiden Office-Implementierungen unterstützt
          
 ```
 
+# Removing optional/conditional paragraphs and tables in a document
+Using `StandardFormatHint.*` placeholder values you are able to keep, remove or hide a paragraph. There are also placeholder values to keep or remove full tables.
 
+Most templates contain paragraphs and/or tables that are only useful in some circumstances (conditional). Using these special placeholder values you are able to control the existence of these.
 
+Imagine there is a document with the following content and structure of placeholders (in this case `MERGEFIELD`s):
+
+```
+  [Paragraph 1] Please pay the course registration fee now. The course fee is due two weeks before
+                the course starts. { MERGEFIELD INV_P_NORMAL }
+                
+  [Paragraph 2] Registration fee and course fee are due two weeks before the course starts. { MERGEFIELD INV_P_TWO_WEEKS_ONLY }
+  
+  [Paragraph 3] Please pay the registration fee and course fee as quick as possible. { MERGEFIELD INV_P_LESS_THAN_TWO_WEEKS }
+```
+
+Depending on your data (e.g. invoice) there is the possibility to control which paragraph should remain in the generated document.
+
+```java
+  final DataPage invPage = new DataPage();
+  final LocalDate courseBeginDate = ...
+  final LocalDate invDate = ...
+ 
+  final long dueDays = DAYS.between(invDate, courseBeginDate);
+ 
+  if (dueDays > 21) {
+      invPage.addValue(new DataValue("INV_P_NORMAL", StandardFormatHint.PARAGRAPH_KEEP));
+      invPage.addValue(new DataValue("INV_P_TWO_WEEKS_ONLY", StandardFormatHint.PARAGRAPH_REMOVE));
+      invPage.addValue(new DataValue("INV_P_LESS_THAN_TWO_WEEKS", StandardFormatHint.PARAGRAPH_REMOVE));
+  } else if (dueDays > 14) {
+      invPage.addValue(new DataValue("INV_P_NORMAL", StandardFormatHint.PARAGRAPH_REMOVE));
+      invPage.addValue(new DataValue("INV_P_TWO_WEEKS_ONLY", StandardFormatHint.PARAGRAPH_KEEP));
+      invPage.addValue(new DataValue("INV_P_LESS_THAN_TWO_WEEKS", StandardFormatHint.PARAGRAPH_REMOVE));
+  } else {
+      invPage.addValue(new DataValue("INV_P_NORMAL", StandardFormatHint.PARAGRAPH_REMOVE));
+      invPage.addValue(new DataValue("INV_P_TWO_WEEKS_ONLY", StandardFormatHint.PARAGRAPH_REMOVE));
+      invPage.addValue(new DataValue("INV_P_LESS_THAN_TWO_WEEKS", StandardFormatHint.PARAGRAPH_KEEP));
+  }
+```
+
+The same is applicable with tables using `StandardFormatHint.TABLE_KEEP` to indicate that a table should remain in a document and that this table should be normal replaced. Using `StandardFormatHint.TABLE_REMOVE` instructs the process to fully remove a table without further replacement.
 
 
 
